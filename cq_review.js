@@ -3,9 +3,9 @@
 // The API key is NOT stored here — it lives in
 // the JSONBIN_API_KEY Netlify environment variable.
 // ─────────────────────────────────────────────
-const VOTES_BIN_ID     = 'YOUR_VOTES_BIN_ID_HERE';
-const COMMENTS_BIN_ID  = 'YOUR_COMMENTS_BIN_ID_HERE';
-const QUESTIONS_BIN_ID = 'YOUR_QUESTIONS_BIN_ID_HERE';
+const VOTES_BIN_ID       = '6a234021da38895dfe8e7815';
+const COMMENTS_BIN_ID    = '6a23400ada38895dfe8e77cb';
+const QUESTIONS_BIN_ID = '6a28218cda38895dfea0b665';
 
 // ─────────────────────────────────────────────
 // DATA SCHEMAS
