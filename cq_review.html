@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Competency Questions — Dietary Ontology Review</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="cq_review.css" />
+</head>
+<body>
+
+<div class="loading-overlay" id="loading"><div class="spinner"></div>LOADING…</div>
+<div class="saving-badge" id="saving-badge">SAVING…</div>
+
+<!-- ══ USERNAME MODAL ══ -->
+<div class="modal-backdrop open" id="username-backdrop">
+  <div class="modal" id="username-modal">
+    <div class="modal-title">Welcome</div>
+    <div class="modal-subtitle">Enter your name to continue. It will be used to sign your votes and comments for this session.</div>
+    <div class="form-row">
+      <label>Your name <span class="required">*</span></label>
+      <input class="form-input" id="username-input" placeholder="e.g. Cesar" maxlength="60" />
+    </div>
+    <button class="btn-save btn-full" onclick="submitUsername()">Enter</button>
+  </div>
+</div>
+
+<!-- ══ MAIN UI ══ -->
+<div class="container">
+  <header>
+    <div class="header-row">
+      <div>
+        <div class="label">Ontology Review · Competency Questions</div>
+        <h1>Dietary Interventions &amp; Health Outcomes</h1>
+        <p>Review structured competency questions, inspect exemplar answers, and annotate with votes and comments.</p>
+      </div>
+      <button class="user-chip" id="user-chip" onclick="promptRename()" title="Change name">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span id="user-chip-name">…</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Controls bar -->
+  <div class="controls-bar">
+    <div class="ctrl-group">
+      <span class="ctrl-label">Sort by</span>
+      <button class="pill-btn active" id="sort-id" onclick="setSort('id')">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M7 12h10M11 18h2"/></svg>
+        Question ID
+      </button>
+      <button class="pill-btn" id="sort-votes" onclick="setSort('votes')">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Avg Rating
+      </button>
+    </div>
+    <div class="ctrl-divider"></div>
+    <div class="ctrl-group" id="tag-filter-group">
+      <span class="ctrl-label">Filter</span>
+      <button class="pill-btn tag-active" id="filter-all" onclick="setFilter(null)">All</button>
+    </div>
+    <div class="ctrl-divider"></div>
+    <div class="ctrl-group">
+      <button class="pill-btn" id="filter-unreviewed" onclick="toggleUnreviewed()">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Not reviewed by me
+      </button>
+    </div>
+    <div class="ctrl-spacer"></div>
+    <button class="btn-backup" id="btn-backup" onclick="downloadBackup()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Backup
+    </button>
+    <button class="btn-add-question" onclick="openModal()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+      Add Question
+    </button>
+  </div>
+
+  <div id="question-list"></div>
+  <footer>Dietary Ontology · Competency Question Review Interface</footer>
+</div>
+
+<!-- ══ ADD QUESTION MODAL ══ -->
+<div class="modal-backdrop" id="modal-backdrop" onclick="handleBackdropClick(event)">
+  <div class="modal" id="modal">
+    <div class="modal-title">Add New Question</div>
+    <button class="modal-close" onclick="closeModal()">&#x2715;</button>
+    <div class="form-row">
+      <label>Question ID</label>
+      <div style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--accent);padding:0.45rem 0.8rem;background:var(--tag-bg);border:1px solid var(--border);border-radius:6px;" id="f-id-preview">Auto-assigned on save</div>
+      <div class="form-hint">Automatically assigned as CQ-N.</div>
+    </div>
+    <div class="form-row">
+      <label>Question Text <span class="required">*</span></label>
+      <textarea class="form-input" id="f-question" placeholder="Enter the competency question…" style="min-height:80px"></textarea>
+      <div class="form-hint">Use *word* for italics and **word** for bold.</div>
+    </div>
+    <div class="form-row">
+      <label>Tags</label>
+      <div class="tags-input-wrap" id="tags-wrap" onclick="document.getElementById('tag-text-input').focus()">
+        <input class="tags-text-input" id="tag-text-input" placeholder="Type a tag and press Enter…" />
+      </div>
+      <div class="form-hint">Press Enter or comma to add. Click × to remove.</div>
+    </div>
+    <div class="form-row">
+      <label>Example Answers <span class="required">*</span> <span style="font-size:.62rem;text-transform:none;letter-spacing:0">(at least one)</span></label>
+      <div class="form-hint" style="margin-top:0;margin-bottom:0.5rem">Use *word* for italics and **word** for bold.</div>
+      <div class="answers-builder" id="answers-builder"></div>
+      <button class="btn-add-answer" onclick="addAnswerField()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        Add another answer
+      </button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveQuestion()">Save Question</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ EDIT QUESTION MODAL ══ -->
+<div class="modal-backdrop" id="edit-modal-backdrop" onclick="handleEditBackdropClick(event)">
+  <div class="modal" id="edit-modal">
+    <div class="modal-title">Edit Question</div>
+    <button class="modal-close" onclick="closeEditModal()">&#x2715;</button>
+    <input type="hidden" id="ef-original-id" />
+    <div class="form-row">
+      <label>Question ID <span class="required">*</span></label>
+      <input class="form-input" id="ef-id" placeholder="e.g. CQ-2" maxlength="30" />
+    </div>
+    <div class="form-row">
+      <label>Question Text <span class="required">*</span></label>
+      <textarea class="form-input" id="ef-question" style="min-height:80px"></textarea>
+      <div class="form-hint">Use *word* for italics and **word** for bold.</div>
+    </div>
+    <div class="form-row">
+      <label>Tags</label>
+      <div class="tags-input-wrap" id="edit-tags-wrap" onclick="document.getElementById('edit-tag-text-input').focus()">
+        <input class="tags-text-input" id="edit-tag-text-input" placeholder="Type a tag and press Enter…" />
+      </div>
+      <div class="form-hint">Press Enter or comma to add. Click × to remove.</div>
+    </div>
+    <div class="form-row">
+      <label>Example Answers <span class="required">*</span></label>
+      <div class="form-hint" style="margin-top:0;margin-bottom:0.5rem">Use *word* for italics and **word** for bold.</div>
+      <div class="answers-builder" id="edit-answers-builder"></div>
+      <button class="btn-add-answer" onclick="addEditAnswerField()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        Add another answer
+      </button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+      <button class="btn-save" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script src="cq_review.js"></script>
+</body>
+</html>

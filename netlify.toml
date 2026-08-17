@@ -1,0 +1,17 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Rewrite /api/* to the matching Netlify function
+[[redirects]]
+  from   = "/api/bin-read"
+  to     = "/.netlify/functions/bin-read"
+  status = 200
+
+[[redirects]]
+  from   = "/api/bin-write"
+  to     = "/.netlify/functions/bin-write"
+  status = 200
