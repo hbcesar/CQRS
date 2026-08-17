@@ -33,7 +33,7 @@ export async function handler(event) {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'X-Access-Key': apiKey
+        'X-Master-Key': apiKey
       },
       body: JSON.stringify(data)
     });

@@ -19,7 +19,7 @@ export async function handler(event) {
 
   try {
     const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
-      headers: { 'X-Access-Key': apiKey }
+      headers: { 'X-Master-Key': apiKey }
     });
 
     const body = await res.text();
