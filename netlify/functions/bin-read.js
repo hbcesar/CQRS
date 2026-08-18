@@ -1,38 +1,36 @@
 /**
- * GET /api/bin-read?binId=<id>
+ * GET /api/bin-read?binId=<votes|comments|questions>
  *
- * Proxies a read (GET /latest) to JSONBin.
- * The API key is read from the JSONBIN_API_KEY environment variable —
- * it never reaches the browser.
+ * Reads a value from Netlify Blobs.
+ * No external service or credentials needed.
  */
-export async function handler(event) {
-  const binId = event.queryStringParameters?.binId;
+import { getStore } from '@netlify/blobs';
 
+export async function handler(event, context) {
+  const binId = event.queryStringParameters?.binId;
   if (!binId) {
     return { statusCode: 400, body: JSON.stringify({ error: 'Missing binId parameter' }) };
   }
 
-  const apiKey = process.env.JSONBIN_API_KEY;
-  if (!apiKey) {
-    return { statusCode: 500, body: JSON.stringify({ error: 'Server misconfiguration: missing API key' }) };
+  const VALID = ['votes', 'comments', 'questions'];
+  if (!VALID.includes(binId)) {
+    return { statusCode: 400, body: JSON.stringify({ error: `Unknown binId: ${binId}` }) };
   }
 
   try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
-      headers: { 'X-Master-Key': apiKey }
-    });
-
-    const body = await res.text();
-
+    const store  = getStore({ name: 'cq-review', consistency: 'strong' });
+    const value  = await store.get(binId, { type: 'json' });
+    // Return null-safe default depending on type
+    const record = value ?? (binId === 'questions' ? [] : {});
     return {
-      statusCode: res.status,
+      statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body
+      body: JSON.stringify({ record })
     };
   } catch (err) {
     return {
       statusCode: 502,
-      body: JSON.stringify({ error: 'Upstream request failed', detail: err.message })
+      body: JSON.stringify({ error: 'Blob read failed', detail: err.message })
     };
   }
 }
