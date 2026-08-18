@@ -6,31 +6,29 @@
  */
 import { getStore } from '@netlify/blobs';
 
-export async function handler(event, context) {
-  const binId = event.queryStringParameters?.binId;
+export default async (req, context) => {
+  const url = new URL(req.url);
+  const binId = url.searchParams.get('binId');
+  
   if (!binId) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Missing binId parameter' }) };
+    return new Response(JSON.stringify({ error: 'Missing binId parameter' }), { status: 400 });
   }
 
   const VALID = ['votes', 'comments', 'questions'];
   if (!VALID.includes(binId)) {
-    return { statusCode: 400, body: JSON.stringify({ error: `Unknown binId: ${binId}` }) };
+    return new Response(JSON.stringify({ error: `Unknown binId: ${binId}` }), { status: 400 });
   }
 
   try {
-    const store  = getStore({ name: 'cq-review', consistency: 'strong' });
-    const value  = await store.get(binId, { type: 'json' });
-    // Return null-safe default depending on type
+    const store = getStore({ name: 'cq-review', consistency: 'strong' });
+    const value = await store.get(binId, { type: 'json' });
     const record = value ?? (binId === 'questions' ? [] : {});
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ record })
-    };
+    
+    return new Response(JSON.stringify({ record }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (err) {
-    return {
-      statusCode: 502,
-      body: JSON.stringify({ error: 'Blob read failed', detail: err.message })
-    };
+    return new Response(JSON.stringify({ error: 'Blob read failed', detail: err.message }), { status: 502 });
   }
-}
+};
