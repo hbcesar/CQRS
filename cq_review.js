@@ -88,7 +88,7 @@ function avgRating(qid) {
 // ─────────────────────────────────────────────
 // USERNAME FLOW
 // ─────────────────────────────────────────────
-function submitUsername() {
+async function submitUsername() {
   const input = document.getElementById('username-input');
   const name = input.value.trim();
   if (!name) {
@@ -97,6 +97,49 @@ function submitUsername() {
     input.focus();
     return;
   }
+
+  if (name.toLowerCase() === 'admin') {
+    const pwInput = document.getElementById('admin-password-input');
+    const password = pwInput.value;
+    if (!password) {
+      pwInput.classList.add('error');
+      setTimeout(() => pwInput.classList.remove('error'), 1200);
+      pwInput.focus();
+      return;
+    }
+
+    const btn = document.querySelector('#username-modal .btn-save');
+    const oldText = btn.textContent;
+    btn.textContent = 'Verifying...';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/api/verify-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Invalid password');
+      }
+    } catch (e) {
+      btn.textContent = oldText;
+      btn.disabled = false;
+      pwInput.value = '';
+      pwInput.placeholder = 'Invalid password!';
+      pwInput.classList.add('error');
+      setTimeout(() => {
+        pwInput.classList.remove('error');
+        pwInput.placeholder = 'Enter admin password';
+      }, 1500);
+      pwInput.focus();
+      return;
+    }
+    btn.textContent = oldText;
+    btn.disabled = false;
+  }
+
   currentUser = name;
   document.getElementById('username-backdrop').classList.remove('open');
   document.getElementById('user-chip-name').textContent = name;
@@ -106,10 +149,30 @@ function submitUsername() {
   QUESTIONS.forEach(q => refreshRatingUI(q.id));
 }
 
-function promptRename() {
+async function promptRename() {
   const newName = prompt('Change your display name:', currentUser);
   if (newName && newName.trim()) {
-    currentUser = newName.trim();
+    const trimmedName = newName.trim();
+    if (trimmedName.toLowerCase() === 'admin') {
+      const pass = prompt('Enter admin password:');
+      if (!pass) return;
+      try {
+        const res = await fetch('/api/verify-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: pass })
+        });
+        const data = await res.json();
+        if (!data.success) {
+          alert('Invalid admin password');
+          return;
+        }
+      } catch (e) {
+        alert('Verification failed');
+        return;
+      }
+    }
+    currentUser = trimmedName;
     document.getElementById('user-chip-name').textContent = currentUser;
     document.querySelectorAll('.comment-name-input').forEach(el => el.value = currentUser);
     renderAll();
@@ -121,8 +184,29 @@ function promptRename() {
 // DOM-READY: keyboard handlers
 // ─────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  // Username modal — dynamic admin password field
+  const usernameInput = document.getElementById('username-input');
+  const adminRow = document.getElementById('admin-password-row');
+  usernameInput.addEventListener('input', e => {
+    if (e.target.value.trim().toLowerCase() === 'admin') {
+      adminRow.style.display = 'block';
+    } else {
+      adminRow.style.display = 'none';
+    }
+  });
+
   // Username modal — Enter key
-  document.getElementById('username-input').addEventListener('keydown', e => {
+  usernameInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      if (adminRow.style.display === 'block') {
+        document.getElementById('admin-password-input').focus();
+      } else {
+        submitUsername();
+      }
+    }
+  });
+
+  document.getElementById('admin-password-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') submitUsername();
   });
 

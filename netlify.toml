@@ -21,3 +21,8 @@
   from   = "/api/bin-write"
   to     = "/.netlify/functions/bin-write"
   status = 200
+
+[[redirects]]
+  from   = "/api/verify-admin"
+  to     = "/.netlify/functions/verify-admin"
+  status = 200
