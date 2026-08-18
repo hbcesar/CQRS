@@ -322,6 +322,10 @@ function buildCard(q) {
   const isAdmin = currentUser.toLowerCase() === 'admin';
 
   const adminButtons = (isAdmin && isLatest()) ? `
+    <button class="btn btn-admin-edit" onclick="duplicateQuestion('${q.id}')" title="Duplicate question">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      Duplicate
+    </button>
     <button class="btn btn-admin-edit" onclick="openEditModal('${q.id}')" title="Edit question">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       Edit
@@ -547,6 +551,56 @@ async function deleteQuestion(qid) {
 }
 
 // ─────────────────────────────────────────────
+// ADMIN: DUPLICATE QUESTION
+// ─────────────────────────────────────────────
+async function duplicateQuestion(qid) {
+  if (!isLatest()) return;
+  const qIdx = QUESTIONS.findIndex(q => q.id === qid);
+  if (qIdx === -1) return;
+  const q = QUESTIONS[qIdx];
+  
+  let baseLabel = q.label;
+  let newCurrentLabel = baseLabel + '.1';
+  let newDuplicateLabel = baseLabel + '.2';
+  let newCurrentId = newCurrentLabel.toLowerCase().replace(/\s+/g, '-');
+  let newDuplicateId = newDuplicateLabel.toLowerCase().replace(/\s+/g, '-');
+  
+  const duplicatedQ = {
+    ...q,
+    id: newDuplicateId,
+    label: newDuplicateLabel,
+    tags: [...q.tags],
+    answers: [...q.answers]
+  };
+  
+  const originalQ = {
+    ...q,
+    id: newCurrentId,
+    label: newCurrentLabel
+  };
+  
+  QUESTIONS.splice(qIdx, 1, originalQ, duplicatedQ);
+  
+  if (votes[qid]) {
+    votes[newCurrentId] = votes[qid];
+    delete votes[qid];
+  }
+  if (comments[qid]) {
+    comments[newCurrentId] = comments[qid];
+    delete comments[qid];
+  }
+  
+  await Promise.all([
+    saveBin(QUESTIONS_BIN_ID, QUESTIONS, latestVersion),
+    saveBin(VOTES_BIN_ID, votes, latestVersion),
+    saveBin(COMMENTS_BIN_ID, comments, latestVersion)
+  ]);
+  
+  rebuildTagButtons();
+  renderAll();
+}
+
+// ─────────────────────────────────────────────
 // ADMIN: EDIT MODAL
 // ─────────────────────────────────────────────
 function openEditModal(qid) {
@@ -697,7 +751,20 @@ function updateAdminUI() {
   const isAdmin = currentUser.toLowerCase() === 'admin';
   document.getElementById('btn-backup').style.display = isAdmin ? 'inline-flex' : 'none';
   const btnCreate = document.getElementById('btn-create-version');
-  if (btnCreate) btnCreate.style.display = isAdmin ? 'inline-flex' : 'none';
+  if (btnCreate) {
+    btnCreate.style.display = isAdmin ? 'inline-flex' : 'none';
+    if (!isLatest()) {
+      btnCreate.disabled = true;
+      btnCreate.style.opacity = '0.5';
+      btnCreate.style.cursor = 'not-allowed';
+      btnCreate.title = "You can only create versions from the latest version.";
+    } else {
+      btnCreate.disabled = false;
+      btnCreate.style.opacity = '1';
+      btnCreate.style.cursor = 'pointer';
+      btnCreate.title = "";
+    }
+  }
   
   const btnAdd = document.querySelector('.btn-add-question');
   if (btnAdd) btnAdd.style.display = isLatest() ? 'inline-flex' : 'none';
