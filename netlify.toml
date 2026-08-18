@@ -8,6 +8,11 @@
 
 # Rewrite /api/* to the matching Netlify function
 [[redirects]]
+  from   = "/api/bin-list"
+  to     = "/.netlify/functions/bin-list"
+  status = 200
+
+[[redirects]]
   from   = "/api/bin-read"
   to     = "/.netlify/functions/bin-read"
   status = 200

@@ -21,6 +21,7 @@ const QUESTIONS_BIN_ID = 'questions';
 let currentUser = '';        // set at login; session-only
 let currentVersion = 1;
 let latestVersion = 1;
+let availableVersions = [1];
 let QUESTIONS = [];
 let votes = {};
 let comments = {};
@@ -731,7 +732,8 @@ const isLatest = () => currentVersion === latestVersion;
 function updateVersionSelector() {
   const select = document.getElementById('version-select');
   select.innerHTML = '';
-  for (let i = latestVersion; i >= 1; i--) {
+  const sorted = [...availableVersions].sort((a, b) => b - a);
+  for (const i of sorted) {
     const opt = document.createElement('option');
     opt.value = i;
     opt.textContent = `Version ${i}${i === latestVersion ? ' (Latest)' : ''}`;
@@ -769,17 +771,36 @@ async function loadDataForVersion() {
 function openImportModal() {
   document.getElementById('import-from-version').textContent = latestVersion;
   const list = document.getElementById('import-questions-list');
-  list.innerHTML = QUESTIONS.map(q => `
+  
+  const selectAllHtml = `
+    <label style="display:flex; align-items:flex-start; gap:0.5rem; padding:0.5rem; border-bottom:1px solid var(--border); cursor:pointer; background:var(--bg-card); position:sticky; top:0;">
+      <input type="checkbox" id="import-select-all" onchange="toggleAllImports(this.checked)" style="margin-top:0.2rem;" checked />
+      <div style="font-weight:600; font-size:0.9rem;">Select / Unselect All</div>
+    </label>
+  `;
+  
+  const questionsHtml = QUESTIONS.map(q => `
     <label style="display:flex; align-items:flex-start; gap:0.5rem; padding:0.5rem; border-bottom:1px solid var(--border); cursor:pointer;">
-      <input type="checkbox" class="import-chk" value="${esc(q.id)}" style="margin-top:0.2rem;" checked />
+      <input type="checkbox" class="import-chk" value="${esc(q.id)}" style="margin-top:0.2rem;" checked onchange="updateSelectAllState()" />
       <div>
         <div style="font-weight:500; font-size:0.9rem;">${esc(q.label)}</div>
-        <div style="font-size:0.85rem; color:var(--text-light);">${esc(q.question)}</div>
+        <div style="font-size:0.85rem; color:var(--text-light);">${formatText(q.question)}</div>
       </div>
     </label>
   `).join('');
-  if (QUESTIONS.length === 0) list.innerHTML = `<div style="padding:1rem; text-align:center; color:var(--text-light);">No questions in version ${latestVersion} to import.</div>`;
+  
+  list.innerHTML = QUESTIONS.length > 0 ? selectAllHtml + questionsHtml : `<div style="padding:1rem; text-align:center; color:var(--text-light);">No questions in version ${latestVersion} to import.</div>`;
   document.getElementById('import-modal-backdrop').classList.add('open');
+}
+
+function toggleAllImports(checked) {
+  document.querySelectorAll('.import-chk').forEach(chk => chk.checked = checked);
+}
+
+function updateSelectAllState() {
+  const allChecked = [...document.querySelectorAll('.import-chk')].every(chk => chk.checked);
+  const selectAll = document.getElementById('import-select-all');
+  if (selectAll) selectAll.checked = allChecked;
 }
 
 function closeImportModal() {
@@ -805,8 +826,7 @@ async function createVersion() {
     saveBin(COMMENTS_BIN_ID, {}, nextV)
   ]);
   
-  await saveBin('metadata', { latestVersion: nextV }, 1);
-  
+  availableVersions.push(nextV);
   latestVersion = nextV;
   closeImportModal();
   btn.disabled = false;
@@ -817,13 +837,24 @@ async function createVersion() {
 }
 
 (async () => {
-  const metadata = await loadBin('metadata', { latestVersion: 1 }, 1);
-  latestVersion = metadata.latestVersion || 1;
+  try {
+    const res = await fetch('/api/bin-list');
+    if (res.ok) {
+      const data = await res.json();
+      availableVersions = data.versions || [1];
+    }
+  } catch (e) {
+    console.warn('Failed to list versions, defaulting to [1]', e);
+  }
+  latestVersion = Math.max(...availableVersions);
+  
   const urlParams = new URLSearchParams(window.location.search);
   const vParam = urlParams.get('v');
-  if (vParam) currentVersion = parseInt(vParam, 10);
-  else currentVersion = latestVersion;
-  if (currentVersion < 1 || currentVersion > latestVersion) currentVersion = latestVersion;
+  if (vParam && availableVersions.includes(parseInt(vParam, 10))) {
+    currentVersion = parseInt(vParam, 10);
+  } else {
+    currentVersion = latestVersion;
+  }
   
   updateVersionSelector();
   await loadDataForVersion();
