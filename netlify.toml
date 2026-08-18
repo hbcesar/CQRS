@@ -1,7 +1,7 @@
 [build]
   publish = "."
   functions = "netlify/functions"
-  command = "npm install && cd netlify/functions && npm install"
+  command = "node inject-title.js && npm install && cd netlify/functions && npm install"
 
 [functions]
   node_bundler = "esbuild"
