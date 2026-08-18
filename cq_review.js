@@ -3,9 +3,9 @@
 // The API key is NOT stored here — it lives in
 // the JSONBIN_API_KEY Netlify environment variable.
 // ─────────────────────────────────────────────
-const VOTES_BIN_ID       = '6a234021da38895dfe8e7815';
-const COMMENTS_BIN_ID    = '6a23400ada38895dfe8e77cb';
-const QUESTIONS_BIN_ID = '6a28218cda38895dfea0b665';
+const VOTES_BIN_ID = 'votes';
+const COMMENTS_BIN_ID = 'comments';
+const QUESTIONS_BIN_ID = 'questions';
 
 // ─────────────────────────────────────────────
 // DATA SCHEMAS
@@ -18,15 +18,15 @@ const QUESTIONS_BIN_ID = '6a28218cda38895dfea0b665';
 // ─────────────────────────────────────────────
 // SESSION STATE
 // ─────────────────────────────────────────────
-let currentUser      = '';        // set at login; session-only
-let QUESTIONS        = [];
-let votes            = {};
-let comments         = {};
-let sortMode         = 'id';
-let activeTags       = new Set(); // empty = show all
+let currentUser = '';        // set at login; session-only
+let QUESTIONS = [];
+let votes = {};
+let comments = {};
+let sortMode = 'id';
+let activeTags = new Set(); // empty = show all
 let filterUnreviewed = false;
-let modalTags        = [];
-let editTags         = [];
+let modalTags = [];
+let editTags = [];
 
 const LIKERT_LABELS = ['', 'Not Relevant', 'Slightly Relevant', 'Moderately Relevant', 'Very Relevant', 'Highly Relevant'];
 
@@ -87,7 +87,7 @@ function avgRating(qid) {
 // ─────────────────────────────────────────────
 function submitUsername() {
   const input = document.getElementById('username-input');
-  const name  = input.value.trim();
+  const name = input.value.trim();
   if (!name) {
     input.classList.add('error');
     setTimeout(() => input.classList.remove('error'), 1200);
@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // RATING (Likert 1-5)
 // ─────────────────────────────────────────────
 async function rate(qid, value) {
-  const d   = ratingData(qid);
+  const d = ratingData(qid);
   const cur = userRating(qid);
   if (cur === value) {
     delete d.ratings[currentUser]; // clicking same star removes rating
@@ -165,14 +165,14 @@ async function rate(qid, value) {
 }
 
 function refreshRatingUI(qid) {
-  const pick  = userRating(qid);
-  const avg   = avgRating(qid);
+  const pick = userRating(qid);
+  const avg = avgRating(qid);
   const count = Object.keys(ratingData(qid).ratings).length;
 
   for (let i = 1; i <= 5; i++) {
     const btn = document.getElementById(`${qid}-star-${i}`);
     if (!btn) continue;
-    btn.classList.toggle('lit',       i <= (pick || avg));
+    btn.classList.toggle('lit', i <= (pick || avg));
     btn.classList.toggle('user-pick', i === pick);
   }
 
@@ -198,15 +198,15 @@ function raterTipHTML(qid) {
 }
 
 function buildLikertHTML(qid) {
-  const pick  = userRating(qid);
-  const avg   = avgRating(qid);
+  const pick = userRating(qid);
+  const avg = avgRating(qid);
   const count = Object.keys(ratingData(qid).ratings).length;
   const avgHTML = count === 0
     ? `<span style="opacity:.45;font-style:italic">no ratings</span>`
     : `avg <span class="avg-val">${avg.toFixed(1)}</span> <span style="opacity:.5">(${count})</span>`;
 
   const stars = [1, 2, 3, 4, 5].map(i => {
-    const lit      = i <= (pick || avg);
+    const lit = i <= (pick || avg);
     const userPick = i === pick;
     return `<button class="star-btn${lit ? ' lit' : ''}${userPick ? ' user-pick' : ''}"
       id="${qid}-star-${i}" onclick="rate('${qid}',${i})" title="${LIKERT_LABELS[i]}">★</button>`;
@@ -226,7 +226,7 @@ function buildLikertHTML(qid) {
 // ─────────────────────────────────────────────
 function rebuildTagButtons() {
   const allTags = [...new Set(QUESTIONS.flatMap(q => q.tags))].sort();
-  const group   = document.getElementById('tag-filter-group');
+  const group = document.getElementById('tag-filter-group');
   [...group.querySelectorAll('.tag-pill')].forEach(b => b.remove());
   allTags.forEach(tag => {
     const btn = document.createElement('button');
@@ -262,7 +262,7 @@ function toggleUnreviewed() {
 // ─────────────────────────────────────────────
 function setSort(mode) {
   sortMode = mode;
-  document.getElementById('sort-id').className    = 'pill-btn' + (mode === 'id'    ? ' active' : '');
+  document.getElementById('sort-id').className = 'pill-btn' + (mode === 'id' ? ' active' : '');
   document.getElementById('sort-votes').className = 'pill-btn' + (mode === 'votes' ? ' active' : '');
   applyRender();
 }
@@ -306,15 +306,15 @@ function renderAll() {
 }
 
 function buildCard(q) {
-  const answers      = (q.answers || []).map((a, i) =>
+  const answers = (q.answers || []).map((a, i) =>
     `<div class="answer-item"><div class="answer-num">Answer ${i + 1}</div>${formatText(a)}</div>`
   ).join('');
-  const tagBadges    = q.tags.map(t =>
+  const tagBadges = q.tags.map(t =>
     `<span class="cq-scope" onclick="setFilter('${esc(t)}')" title="Filter by ${esc(t)}">${esc(t)}</span>`
   ).join('');
   const commentCount = (comments[q.id] || []).length;
   const commentLabel = commentCount > 0 ? `Comment (${commentCount})` : 'Comment';
-  const isAdmin      = currentUser.toLowerCase() === 'admin';
+  const isAdmin = currentUser.toLowerCase() === 'admin';
 
   const adminButtons = isAdmin ? `
     <button class="btn btn-admin-edit" onclick="openEditModal('${q.id}')" title="Edit question">
@@ -369,8 +369,8 @@ function buildCard(q) {
 // ─────────────────────────────────────────────
 function toggleAnswers(id) {
   const panel = document.getElementById(id + '-answers');
-  const btn   = document.querySelector(`#${id} .btn-answers`);
-  const open  = panel.classList.toggle('open');
+  const btn = document.querySelector(`#${id} .btn-answers`);
+  const open = panel.classList.toggle('open');
   btn.classList.toggle('active', open);
   const svg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".5" fill="currentColor"/></svg>`;
   btn.innerHTML = `${svg} ${open ? 'Hide Answers' : 'Show Answers'}`;
@@ -381,8 +381,8 @@ function toggleAnswers(id) {
 // ─────────────────────────────────────────────
 function toggleComments(id) {
   const panel = document.getElementById(id + '-comments');
-  const btn   = document.getElementById(id + '-comment-btn');
-  const open  = panel.classList.toggle('open');
+  const btn = document.getElementById(id + '-comment-btn');
+  const open = panel.classList.toggle('open');
   btn.classList.toggle('active', open);
   if (open) {
     renderCommentList(id);
@@ -461,7 +461,7 @@ function closeModal() { document.getElementById('modal-backdrop').classList.remo
 function handleBackdropClick(e) { if (e.target.id === 'modal-backdrop') closeModal(); }
 
 function renderModalTags() {
-  const wrap  = document.getElementById('tags-wrap');
+  const wrap = document.getElementById('tags-wrap');
   const input = document.getElementById('tag-text-input');
   [...wrap.querySelectorAll('.tag-chip')].forEach(c => c.remove());
   modalTags.forEach((tag, i) => {
@@ -475,8 +475,8 @@ function removeModalTag(i) { modalTags.splice(i, 1); renderModalTags(); }
 
 function addAnswerField() {
   const builder = document.getElementById('answers-builder');
-  const idx     = builder.children.length + 1;
-  const row     = document.createElement('div');
+  const idx = builder.children.length + 1;
+  const row = document.createElement('div');
   row.className = 'answer-row';
   row.innerHTML = `<span class="answer-row-num">${idx}</span><textarea placeholder="Answer ${idx}…"></textarea><button class="btn-remove-answer" onclick="removeAnswerField(this)" title="Remove"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>`;
   builder.appendChild(row);
@@ -495,7 +495,7 @@ function removeAnswerField(btn) {
 
 async function saveQuestion() {
   const questionTx = document.getElementById('f-question').value.trim();
-  const builder    = document.getElementById('answers-builder');
+  const builder = document.getElementById('answers-builder');
   const answerTxts = [...builder.querySelectorAll('textarea')].map(t => t.value.trim());
   let valid = true;
   const markErr = el => { el.classList.add('error'); setTimeout(() => el.classList.remove('error'), 1500); valid = false; };
@@ -504,10 +504,10 @@ async function saveQuestion() {
   if (!valid || answerTxts.some(a => !a)) return;
 
   const nextN = QUESTIONS.length;
-  const newQ  = {
-    id:      `cq-${nextN}`,
-    label:   `CQ-${nextN}`,
-    tags:    [...modalTags],
+  const newQ = {
+    id: `cq-${nextN}`,
+    label: `CQ-${nextN}`,
+    tags: [...modalTags],
     question: questionTx,
     answers: answerTxts,
     ...(currentUser.toLowerCase() !== 'admin' ? { addedBy: currentUser } : {})
@@ -531,8 +531,8 @@ async function deleteQuestion(qid) {
   delete comments[qid];
   await Promise.all([
     saveBin(QUESTIONS_BIN_ID, QUESTIONS),
-    saveBin(VOTES_BIN_ID,     votes),
-    saveBin(COMMENTS_BIN_ID,  comments)
+    saveBin(VOTES_BIN_ID, votes),
+    saveBin(COMMENTS_BIN_ID, comments)
   ]);
   rebuildTagButtons();
   renderAll();
@@ -546,8 +546,8 @@ function openEditModal(qid) {
   if (!q) return;
   editTags = [...q.tags];
   document.getElementById('ef-original-id').value = qid;
-  document.getElementById('ef-id').value           = q.label;
-  document.getElementById('ef-question').value     = q.question;
+  document.getElementById('ef-id').value = q.label;
+  document.getElementById('ef-question').value = q.question;
   ['ef-id', 'ef-question'].forEach(id => document.getElementById(id).classList.remove('error'));
   renderEditTags();
   const builder = document.getElementById('edit-answers-builder');
@@ -561,7 +561,7 @@ function closeEditModal() { document.getElementById('edit-modal-backdrop').class
 function handleEditBackdropClick(e) { if (e.target.id === 'edit-modal-backdrop') closeEditModal(); }
 
 function renderEditTags() {
-  const wrap  = document.getElementById('edit-tags-wrap');
+  const wrap = document.getElementById('edit-tags-wrap');
   const input = document.getElementById('edit-tag-text-input');
   [...wrap.querySelectorAll('.tag-chip')].forEach(c => c.remove());
   editTags.forEach((tag, i) => {
@@ -575,8 +575,8 @@ function removeEditTag(i) { editTags.splice(i, 1); renderEditTags(); }
 
 function addEditAnswerField(value = '') {
   const builder = document.getElementById('edit-answers-builder');
-  const idx     = builder.children.length + 1;
-  const row     = document.createElement('div');
+  const idx = builder.children.length + 1;
+  const row = document.createElement('div');
   row.className = 'answer-row';
   row.innerHTML = `<span class="answer-row-num">${idx}</span><textarea placeholder="Answer ${idx}…"></textarea><button class="btn-remove-answer" onclick="removeEditAnswerField(this)" title="Remove"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>`;
   builder.appendChild(row);
@@ -595,14 +595,14 @@ function removeEditAnswerField(btn) {
 
 async function saveEdit() {
   const originalId = document.getElementById('ef-original-id').value;
-  const idRaw      = document.getElementById('ef-id').value.trim();
+  const idRaw = document.getElementById('ef-id').value.trim();
   const questionTx = document.getElementById('ef-question').value.trim();
-  const builder    = document.getElementById('edit-answers-builder');
+  const builder = document.getElementById('edit-answers-builder');
   const answerTxts = [...builder.querySelectorAll('textarea')].map(t => t.value.trim());
 
   let valid = true;
   const markErr = el => { el.classList.add('error'); setTimeout(() => el.classList.remove('error'), 1500); valid = false; };
-  if (!idRaw)      markErr(document.getElementById('ef-id'));
+  if (!idRaw) markErr(document.getElementById('ef-id'));
   if (!questionTx) markErr(document.getElementById('ef-question'));
   answerTxts.forEach((a, i) => { if (!a) markErr(builder.querySelectorAll('textarea')[i]); });
 
@@ -622,14 +622,14 @@ async function saveEdit() {
   QUESTIONS[idx] = { ...QUESTIONS[idx], id: normalId, label: idRaw, tags: [...editTags], question: questionTx, answers: answerTxts };
 
   if (normalId !== originalId) {
-    votes[normalId]    = votes[originalId];    delete votes[originalId];
+    votes[normalId] = votes[originalId]; delete votes[originalId];
     comments[normalId] = comments[originalId]; delete comments[originalId];
   }
 
   await Promise.all([
     saveBin(QUESTIONS_BIN_ID, QUESTIONS),
-    saveBin(VOTES_BIN_ID,     votes),
-    saveBin(COMMENTS_BIN_ID,  comments)
+    saveBin(VOTES_BIN_ID, votes),
+    saveBin(COMMENTS_BIN_ID, comments)
   ]);
   closeEditModal();
   rebuildTagButtons();
@@ -654,20 +654,20 @@ function downloadBackup() {
     questions: QUESTIONS.map(q => {
       const ratings = (votes[q.id] && votes[q.id].ratings) || {};
       const entries = Object.entries(ratings);
-      const avg     = entries.length
+      const avg = entries.length
         ? (entries.reduce((s, [, v]) => s + v, 0) / entries.length).toFixed(2)
         : null;
       return {
-        id:       q.id,
-        label:    q.label,
-        tags:     q.tags,
-        addedBy:  q.addedBy || 'admin',
+        id: q.id,
+        label: q.label,
+        tags: q.tags,
+        addedBy: q.addedBy || 'admin',
         question: q.question,
-        answers:  q.answers,
+        answers: q.answers,
         ratings: {
           average: avg ? Number(avg) : null,
-          count:   entries.length,
-          byUser:  Object.fromEntries(
+          count: entries.length,
+          byUser: Object.fromEntries(
             entries.map(([user, val]) => [user, { score: val, label: LIKERT_LABELS[val] }])
           )
         },
@@ -676,9 +676,9 @@ function downloadBackup() {
     })
   };
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
   a.download = `cq-backup-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
@@ -706,7 +706,7 @@ function esc(str) {
 function formatText(str) {
   let out = esc(str);
   out = out.replace(/\*\*([^*]+?)\*\*/g, '<b>$1</b>');
-  out = out.replace(/\*([^*]+?)\*/g,     '<i>$1</i>');
+  out = out.replace(/\*([^*]+?)\*/g, '<i>$1</i>');
   return out;
 }
 
@@ -715,12 +715,12 @@ function formatText(str) {
 // ─────────────────────────────────────────────
 (async () => {
   const [storedVotes, storedComments, storedQuestions] = await Promise.all([
-    loadBin(VOTES_BIN_ID,     {}),
-    loadBin(COMMENTS_BIN_ID,  {}),
+    loadBin(VOTES_BIN_ID, {}),
+    loadBin(COMMENTS_BIN_ID, {}),
     loadBin(QUESTIONS_BIN_ID, [])
   ]);
-  votes     = storedVotes;
-  comments  = storedComments;
+  votes = storedVotes;
+  comments = storedComments;
   QUESTIONS = mergeQuestions(storedQuestions);
   rebuildTagButtons();
   renderAll();
