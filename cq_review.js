@@ -19,6 +19,8 @@ const QUESTIONS_BIN_ID = 'questions';
 // SESSION STATE
 // ─────────────────────────────────────────────
 let currentUser = '';        // set at login; session-only
+let currentVersion = 1;
+let latestVersion = 1;
 let QUESTIONS = [];
 let votes = {};
 let comments = {};
@@ -33,9 +35,9 @@ const LIKERT_LABELS = ['', 'Not Relevant', 'Slightly Relevant', 'Moderately Rele
 // ─────────────────────────────────────────────
 // PROXY HELPERS  (key stays on the server)
 // ─────────────────────────────────────────────
-async function loadBin(binId, fallback) {
+async function loadBin(binId, fallback, version = currentVersion) {
   try {
-    const res = await fetch(`/api/bin-read?binId=${encodeURIComponent(binId)}`);
+    const res = await fetch(`/api/bin-read?binId=${encodeURIComponent(binId)}&version=${version}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return (await res.json()).record ?? fallback;
   } catch (e) {
@@ -44,13 +46,13 @@ async function loadBin(binId, fallback) {
   }
 }
 
-async function saveBin(binId, data) {
+async function saveBin(binId, data, version = currentVersion) {
   showSaving(true);
   try {
     const res = await fetch('/api/bin-write', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ binId, data })
+      body: JSON.stringify({ binId, data, version })
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
   } catch (e) {
@@ -152,6 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // RATING (Likert 1-5)
 // ─────────────────────────────────────────────
 async function rate(qid, value) {
+  if (!isLatest()) return;
   const d = ratingData(qid);
   const cur = userRating(qid);
   if (cur === value) {
@@ -208,8 +211,9 @@ function buildLikertHTML(qid) {
   const stars = [1, 2, 3, 4, 5].map(i => {
     const lit = i <= (pick || avg);
     const userPick = i === pick;
+    const onClick = isLatest() ? `onclick="rate('${qid}',${i})"` : `style="cursor:default"`;
     return `<button class="star-btn${lit ? ' lit' : ''}${userPick ? ' user-pick' : ''}"
-      id="${qid}-star-${i}" onclick="rate('${qid}',${i})" title="${LIKERT_LABELS[i]}">★</button>`;
+      id="${qid}-star-${i}" ${onClick} title="${LIKERT_LABELS[i]}">★</button>`;
   }).join('');
 
   return `
@@ -316,7 +320,7 @@ function buildCard(q) {
   const commentLabel = commentCount > 0 ? `Comment (${commentCount})` : 'Comment';
   const isAdmin = currentUser.toLowerCase() === 'admin';
 
-  const adminButtons = isAdmin ? `
+  const adminButtons = (isAdmin && isLatest()) ? `
     <button class="btn btn-admin-edit" onclick="openEditModal('${q.id}')" title="Edit question">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       Edit
@@ -353,7 +357,7 @@ function buildCard(q) {
     <div class="comment-panel" id="${q.id}-comments">
       <div class="comment-title">Comments</div>
       <div class="comment-list" id="${q.id}-comment-list"></div>
-      <div class="comment-form">
+      <div class="comment-form" ${isLatest() ? '' : 'style="display:none"'}>
         <input class="comment-name-input" id="${q.id}-comment-name" placeholder="Your name" maxlength="60" value="${esc(currentUser)}" />
         <div class="comment-input-row">
           <textarea class="comment-input" id="${q.id}-comment-text" placeholder="Add a comment…"></textarea>
@@ -393,6 +397,7 @@ function toggleComments(id) {
 }
 
 async function submitComment(id) {
+  if (!isLatest()) return;
   const nameEl = document.getElementById(id + '-comment-name');
   const textEl = document.getElementById(id + '-comment-text');
   const name = nameEl.value.trim(), text = textEl.value.trim();
@@ -419,14 +424,14 @@ function renderCommentList(id) {
       <div class="cmeta">
         <span class="cmeta-name">${esc(c.name)}</span>
         <span class="cmeta-time">${c.time}</span>
-        ${isAdmin ? `<button class="cmeta-del" onclick="deleteComment('${id}', ${i})" title="Delete comment">✕ delete</button>` : ''}
+        ${(isAdmin && isLatest()) ? `<button class="cmeta-del" onclick="deleteComment('${id}', ${i})" title="Delete comment">✕ delete</button>` : ''}
       </div>
       ${esc(c.text)}
     </div>`).join('');
 }
 
 async function deleteComment(qid, idx) {
-  if (!comments[qid]) return;
+  if (!isLatest() || !comments[qid]) return;
   comments[qid].splice(idx, 1);
   renderCommentList(qid);
   updateCommentCount(qid);
@@ -445,6 +450,7 @@ function updateCommentCount(id) {
 // ADD QUESTION MODAL
 // ─────────────────────────────────────────────
 function openModal() {
+  if (!isLatest()) return;
   modalTags = [];
   document.getElementById('f-question').value = '';
   document.getElementById('f-question').classList.remove('error');
@@ -523,6 +529,7 @@ async function saveQuestion() {
 // ADMIN: DELETE QUESTION
 // ─────────────────────────────────────────────
 async function deleteQuestion(qid) {
+  if (!isLatest()) return;
   const q = QUESTIONS.find(q => q.id === qid);
   if (!q) return;
   if (!confirm(`Delete "${q.label}: ${q.question.slice(0, 60)}…"?\n\nThis cannot be undone.`)) return;
@@ -542,6 +549,7 @@ async function deleteQuestion(qid) {
 // ADMIN: EDIT MODAL
 // ─────────────────────────────────────────────
 function openEditModal(qid) {
+  if (!isLatest()) return;
   const q = QUESTIONS.find(q => q.id === qid);
   if (!q) return;
   editTags = [...q.tags];
@@ -687,6 +695,11 @@ function downloadBackup() {
 function updateAdminUI() {
   const isAdmin = currentUser.toLowerCase() === 'admin';
   document.getElementById('btn-backup').style.display = isAdmin ? 'inline-flex' : 'none';
+  const btnCreate = document.getElementById('btn-create-version');
+  if (btnCreate) btnCreate.style.display = isAdmin ? 'inline-flex' : 'none';
+  
+  const btnAdd = document.querySelector('.btn-add-question');
+  if (btnAdd) btnAdd.style.display = isLatest() ? 'inline-flex' : 'none';
 }
 
 // ─────────────────────────────────────────────
@@ -711,9 +724,34 @@ function formatText(str) {
 }
 
 // ─────────────────────────────────────────────
-// INIT
+// INIT & VERSION CONTROL
 // ─────────────────────────────────────────────
-(async () => {
+const isLatest = () => currentVersion === latestVersion;
+
+function updateVersionSelector() {
+  const select = document.getElementById('version-select');
+  select.innerHTML = '';
+  for (let i = latestVersion; i >= 1; i--) {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = `Version ${i}${i === latestVersion ? ' (Latest)' : ''}`;
+    if (i === currentVersion) opt.selected = true;
+    select.appendChild(opt);
+  }
+}
+
+async function switchVersion(val) {
+  const newV = parseInt(val, 10);
+  if (newV === currentVersion) return;
+  const url = new URL(window.location);
+  url.searchParams.set('v', newV);
+  window.history.pushState({}, '', url);
+  currentVersion = newV;
+  await loadDataForVersion();
+}
+
+async function loadDataForVersion() {
+  document.getElementById('loading').style.display = 'flex';
   const [storedVotes, storedComments, storedQuestions] = await Promise.all([
     loadBin(VOTES_BIN_ID, {}),
     loadBin(COMMENTS_BIN_ID, {}),
@@ -724,6 +762,70 @@ function formatText(str) {
   QUESTIONS = mergeQuestions(storedQuestions);
   rebuildTagButtons();
   renderAll();
+  updateAdminUI();
   document.getElementById('loading').style.display = 'none';
+}
+
+function openImportModal() {
+  document.getElementById('import-from-version').textContent = latestVersion;
+  const list = document.getElementById('import-questions-list');
+  list.innerHTML = QUESTIONS.map(q => `
+    <label style="display:flex; align-items:flex-start; gap:0.5rem; padding:0.5rem; border-bottom:1px solid var(--border); cursor:pointer;">
+      <input type="checkbox" class="import-chk" value="${esc(q.id)}" style="margin-top:0.2rem;" checked />
+      <div>
+        <div style="font-weight:500; font-size:0.9rem;">${esc(q.label)}</div>
+        <div style="font-size:0.85rem; color:var(--text-light);">${esc(q.question)}</div>
+      </div>
+    </label>
+  `).join('');
+  if (QUESTIONS.length === 0) list.innerHTML = `<div style="padding:1rem; text-align:center; color:var(--text-light);">No questions in version ${latestVersion} to import.</div>`;
+  document.getElementById('import-modal-backdrop').classList.add('open');
+}
+
+function closeImportModal() {
+  document.getElementById('import-modal-backdrop').classList.remove('open');
+}
+
+async function createVersion() {
+  const btn = document.getElementById('btn-confirm-create-version');
+  btn.disabled = true;
+  btn.textContent = 'Creating...';
+  
+  const checkedIds = [...document.querySelectorAll('.import-chk:checked')].map(el => el.value);
+  const importedQuestions = QUESTIONS.filter(q => checkedIds.includes(q.id)).map(q => ({
+    ...q,
+    answers: [...q.answers],
+    tags: [...q.tags]
+  }));
+  
+  const nextV = latestVersion + 1;
+  await Promise.all([
+    saveBin(QUESTIONS_BIN_ID, importedQuestions, nextV),
+    saveBin(VOTES_BIN_ID, {}, nextV),
+    saveBin(COMMENTS_BIN_ID, {}, nextV)
+  ]);
+  
+  await saveBin('metadata', { latestVersion: nextV }, 1);
+  
+  latestVersion = nextV;
+  closeImportModal();
+  btn.disabled = false;
+  btn.textContent = 'Create Version';
+  
+  updateVersionSelector();
+  await switchVersion(nextV);
+}
+
+(async () => {
+  const metadata = await loadBin('metadata', { latestVersion: 1 }, 1);
+  latestVersion = metadata.latestVersion || 1;
+  const urlParams = new URLSearchParams(window.location.search);
+  const vParam = urlParams.get('v');
+  if (vParam) currentVersion = parseInt(vParam, 10);
+  else currentVersion = latestVersion;
+  if (currentVersion < 1 || currentVersion > latestVersion) currentVersion = latestVersion;
+  
+  updateVersionSelector();
+  await loadDataForVersion();
   document.getElementById('username-input').focus();
 })();

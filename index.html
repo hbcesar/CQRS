@@ -34,10 +34,16 @@
         <h1>Dietary Interventions &amp; Health Outcomes</h1>
         <p>Review structured competency questions, inspect exemplar answers, and annotate with votes and comments.</p>
       </div>
-      <button class="user-chip" id="user-chip" onclick="promptRename()" title="Change name">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <span id="user-chip-name">…</span>
-      </button>
+      <div style="display: flex; gap: 1rem; align-items: center;">
+        <div id="version-controls" style="display: flex; gap: 0.5rem; align-items: center;">
+          <select id="version-select" onchange="switchVersion(this.value)" class="form-input" style="padding: 0.25rem 0.5rem; font-size: 0.9rem; height: auto; min-height: 0; width: auto; cursor: pointer;"></select>
+          <button id="btn-create-version" class="btn-save" style="display:none; padding: 0.25rem 0.5rem; font-size: 0.9rem; height: auto; min-height: 0;" onclick="openImportModal()">Create Version</button>
+        </div>
+        <button class="user-chip" id="user-chip" onclick="promptRename()" title="Change name">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span id="user-chip-name">…</span>
+        </button>
+      </div>
     </div>
   </header>
 
@@ -153,6 +159,22 @@
     <div class="modal-footer">
       <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
       <button class="btn-save" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ IMPORT QUESTIONS MODAL ══ -->
+<div class="modal-backdrop" id="import-modal-backdrop" onclick="if(event.target.id === 'import-modal-backdrop') closeImportModal()">
+  <div class="modal" id="import-modal" style="max-width: 600px;">
+    <div class="modal-title">Create New Version</div>
+    <div class="modal-subtitle" style="margin-bottom: 1rem;">Select questions from Version <span id="import-from-version"></span> to carry over. Comments and ratings will not be carried over.</div>
+    <button class="modal-close" onclick="closeImportModal()">&#x2715;</button>
+    <div class="form-row" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem;" id="import-questions-list">
+      <!-- Checkboxes populated dynamically -->
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeImportModal()">Cancel</button>
+      <button class="btn-save" id="btn-confirm-create-version" onclick="createVersion()">Create Version</button>
     </div>
   </div>
 </div>
