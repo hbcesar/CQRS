@@ -646,13 +646,13 @@ async function duplicateQuestion(qid) {
   const qIdx = QUESTIONS.findIndex(q => q.id === qid);
   if (qIdx === -1) return;
   const q = QUESTIONS[qIdx];
-  
+
   let baseLabel = q.label;
   let newCurrentLabel = baseLabel + '.1';
   let newDuplicateLabel = baseLabel + '.2';
   let newCurrentId = newCurrentLabel.toLowerCase().replace(/\s+/g, '-');
   let newDuplicateId = newDuplicateLabel.toLowerCase().replace(/\s+/g, '-');
-  
+
   const duplicatedQ = {
     ...q,
     id: newDuplicateId,
@@ -660,15 +660,15 @@ async function duplicateQuestion(qid) {
     tags: [...q.tags],
     answers: [...q.answers]
   };
-  
+
   const originalQ = {
     ...q,
     id: newCurrentId,
     label: newCurrentLabel
   };
-  
+
   QUESTIONS.splice(qIdx, 1, originalQ, duplicatedQ);
-  
+
   if (votes[qid]) {
     votes[newCurrentId] = votes[qid];
     delete votes[qid];
@@ -677,13 +677,13 @@ async function duplicateQuestion(qid) {
     comments[newCurrentId] = comments[qid];
     delete comments[qid];
   }
-  
+
   await Promise.all([
     saveBin(QUESTIONS_BIN_ID, QUESTIONS, latestVersion),
     saveBin(VOTES_BIN_ID, votes, latestVersion),
     saveBin(COMMENTS_BIN_ID, comments, latestVersion)
   ]);
-  
+
   rebuildTagButtons();
   renderAll();
 }
@@ -849,7 +849,7 @@ async function normalizeIDs(bypassConfirm = false) {
     const oldId = q.id;
     const newLabel = `CQ-${index + 1}`;
     const newId = `cq-${index + 1}`;
-    
+
     if (votes[oldId]) newVotes[newId] = votes[oldId];
     if (comments[oldId]) newComments[newId] = comments[oldId];
 
@@ -871,6 +871,9 @@ async function normalizeIDs(bypassConfirm = false) {
 
 function updateAdminUI() {
   const isAdmin = currentUser.toLowerCase() === 'admin';
+  const adminPanel = document.getElementById('admin-controls-panel');
+  if (adminPanel) adminPanel.style.display = isAdmin ? 'flex' : 'none';
+  
   document.getElementById('btn-backup').style.display = isAdmin ? 'inline-flex' : 'none';
   const btnReorder = document.getElementById('btn-reorder');
   if (btnReorder) btnReorder.style.display = isAdmin ? 'inline-flex' : 'none';
@@ -891,7 +894,7 @@ function updateAdminUI() {
       btnCreate.title = "";
     }
   }
-  
+
   const btnAdd = document.querySelector('.btn-add-question');
   if (btnAdd) btnAdd.style.display = isLatest() ? 'inline-flex' : 'none';
 }
@@ -945,7 +948,7 @@ function handleDragEnd(e) {
 function openReorderModal() {
   if (!isLatest()) return;
   const list = document.getElementById('reorder-questions-list');
-  
+
   const items = [...QUESTIONS].sort((a, b) => {
     const aMatch = a.id.match(/\d+/);
     const bMatch = b.id.match(/\d+/);
@@ -953,14 +956,14 @@ function openReorderModal() {
     const bNum = bMatch ? parseInt(bMatch[0], 10) : 0;
     return aNum - bNum;
   });
-  
+
   list.innerHTML = items.map(q => `
     <div class="reorder-item" draggable="true" data-id="${esc(q.id)}" style="padding: 0.5rem; border: 1px solid var(--border); margin-bottom: 0.2rem; cursor: grab; background: var(--bg-card); display: flex; align-items: center; gap: 0.5rem; border-radius: 4px;">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-light)" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-      <strong>${esc(q.label)}</strong>: <span style="font-size:0.85rem; color:var(--text-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 400px;">${esc(q.question)}</span>
+      <strong>${esc(q.label)}</strong>: <span style="font-size:0.85rem; color:var(--text-light); overflow: hidden; text-overflow: ellipsis; max-width: 400px;">${esc(q.question)}</span>
     </div>
   `).join('');
-  
+
   const els = list.querySelectorAll('.reorder-item');
   els.forEach(el => {
     el.addEventListener('dragstart', handleDragStart, false);
@@ -970,7 +973,7 @@ function openReorderModal() {
     el.addEventListener('drop', handleDrop, false);
     el.addEventListener('dragend', handleDragEnd, false);
   });
-  
+
   document.getElementById('reorder-modal-backdrop').classList.add('open');
 }
 
@@ -981,11 +984,11 @@ function closeReorderModal() {
 async function saveReorder() {
   const list = document.getElementById('reorder-questions-list');
   const orderedIds = [...list.querySelectorAll('.reorder-item')].map(el => el.dataset.id);
-  
+
   const orderedQuestions = orderedIds.map(id => QUESTIONS.find(q => q.id === id)).filter(Boolean);
   const remaining = QUESTIONS.filter(q => !orderedIds.includes(q.id));
   QUESTIONS = [...orderedQuestions, ...remaining];
-  
+
   closeReorderModal();
   await normalizeIDs(true);
 }
@@ -996,7 +999,7 @@ function applyHighlight(textareaId) {
 
   const start = textarea.selectionStart;
   const end = textarea.selectionEnd;
-  
+
   if (start === end) return; // No selection
 
   const text = textarea.value;
@@ -1005,7 +1008,7 @@ function applyHighlight(textareaId) {
   const after = text.substring(end);
 
   textarea.value = before + '*' + selected + '*' + after;
-  
+
   // Reselect the text including asterisks
   textarea.focus();
   textarea.setSelectionRange(start, end + 2);
@@ -1092,14 +1095,14 @@ async function loadDataForVersion() {
 function openImportModal() {
   document.getElementById('import-from-version').textContent = latestVersion;
   const list = document.getElementById('import-questions-list');
-  
+
   const selectAllHtml = `
     <label style="display:flex; align-items:flex-start; gap:0.5rem; padding:0.5rem; border-bottom:1px solid var(--border); cursor:pointer; background:var(--bg-card); position:sticky; top:0;">
       <input type="checkbox" id="import-select-all" onchange="toggleAllImports(this.checked)" style="margin-top:0.2rem;" checked />
       <div style="font-weight:600; font-size:0.9rem;">Select / Unselect All</div>
     </label>
   `;
-  
+
   const questionsHtml = QUESTIONS.map(q => `
     <label style="display:flex; align-items:flex-start; gap:0.5rem; padding:0.5rem; border-bottom:1px solid var(--border); cursor:pointer;">
       <input type="checkbox" class="import-chk" value="${esc(q.id)}" style="margin-top:0.2rem;" checked onchange="updateSelectAllState()" />
@@ -1109,7 +1112,7 @@ function openImportModal() {
       </div>
     </label>
   `).join('');
-  
+
   list.innerHTML = QUESTIONS.length > 0 ? selectAllHtml + questionsHtml : `<div style="padding:1rem; text-align:center; color:var(--text-light);">No questions in version ${latestVersion} to import.</div>`;
   document.getElementById('import-modal-backdrop').classList.add('open');
 }
@@ -1132,27 +1135,27 @@ async function createVersion() {
   const btn = document.getElementById('btn-confirm-create-version');
   btn.disabled = true;
   btn.textContent = 'Creating...';
-  
+
   const checkedIds = [...document.querySelectorAll('.import-chk:checked')].map(el => el.value);
   const importedQuestions = QUESTIONS.filter(q => checkedIds.includes(q.id)).map(q => ({
     ...q,
     answers: [...q.answers],
     tags: [...q.tags]
   }));
-  
+
   const nextV = latestVersion + 1;
   await Promise.all([
     saveBin(QUESTIONS_BIN_ID, importedQuestions, nextV),
     saveBin(VOTES_BIN_ID, {}, nextV),
     saveBin(COMMENTS_BIN_ID, {}, nextV)
   ]);
-  
+
   availableVersions.push(nextV);
   latestVersion = nextV;
   closeImportModal();
   btn.disabled = false;
   btn.textContent = 'Create Version';
-  
+
   updateVersionSelector();
   await switchVersion(nextV);
 }
@@ -1168,7 +1171,7 @@ async function createVersion() {
     console.warn('Failed to list versions, defaulting to [1]', e);
   }
   latestVersion = Math.max(...availableVersions);
-  
+
   const urlParams = new URLSearchParams(window.location.search);
   const vParam = urlParams.get('v');
   if (vParam && availableVersions.includes(parseInt(vParam, 10))) {
@@ -1176,7 +1179,7 @@ async function createVersion() {
   } else {
     currentVersion = latestVersion;
   }
-  
+
   updateVersionSelector();
   await loadDataForVersion();
   document.getElementById('username-input').focus();

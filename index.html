@@ -32,13 +32,13 @@
 <!-- ══ MAIN UI ══ -->
 <div class="container">
   <header>
-    <div class="header-row">
-      <div>
+    <div class="header-row" style="flex-wrap: nowrap;">
+      <div style="flex: 1; padding-right: 1rem;">
         <div class="label">Ontology Review · Competency Questions</div>
         <h1 id="app-title">Dietary Interventions &amp; Health Outcomes</h1>
         <p>Review structured competency questions, inspect exemplar answers, and annotate with votes and comments.</p>
       </div>
-      <div style="display: flex; gap: 1rem; align-items: center;">
+      <div style="display: flex; gap: 1rem; align-items: flex-start; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end;">
         <div id="version-controls" style="display: flex; gap: 0.5rem; align-items: center;">
           <select id="version-select" onchange="switchVersion(this.value)" class="form-input" style="padding: 0.25rem 0.5rem; font-size: 0.9rem; height: auto; min-height: 0; width: auto; cursor: pointer;"></select>
           <button id="btn-create-version" class="btn-save" style="display:none; padding: 0.25rem 0.5rem; font-size: 0.9rem; height: auto; min-height: 0;" onclick="openImportModal()">Create Version</button>
@@ -50,6 +50,23 @@
       </div>
     </div>
   </header>
+
+  <!-- Admin controls bar -->
+  <div class="controls-bar" id="admin-controls-panel" style="display:none; padding: 0.6rem 1.1rem; margin-bottom: 0.8rem; background: var(--tag-bg);">
+    <span class="ctrl-label" style="margin-right: 0.5rem;">Admin Actions</span>
+    <button class="btn-backup" id="btn-reorder" onclick="openReorderModal()" style="display:inline-flex; border-color: var(--accent); color: var(--accent);">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+      Reorder CQs
+    </button>
+    <button class="btn-backup" id="btn-normalize" onclick="normalizeIDs()" style="display:inline-flex; border-color: var(--accent); color: var(--accent);">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      Normalize IDs
+    </button>
+    <button class="btn-backup" id="btn-backup" onclick="downloadBackup()" style="display:inline-flex; border-color: var(--accent); color: var(--accent);">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Backup
+    </button>
+  </div>
 
   <!-- Controls bar -->
   <div class="controls-bar">
@@ -77,18 +94,6 @@
       </button>
     </div>
     <div class="ctrl-spacer"></div>
-    <button class="btn-backup" id="btn-reorder" onclick="openReorderModal()" style="display:none;">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-      Reorder CQs
-    </button>
-    <button class="btn-backup" id="btn-normalize" onclick="normalizeIDs()" style="display:none;">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-      Normalize IDs
-    </button>
-    <button class="btn-backup" id="btn-backup" onclick="downloadBackup()">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      Backup
-    </button>
     <button class="btn-add-question" onclick="openModal()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
       Add Question
