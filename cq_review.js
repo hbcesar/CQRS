@@ -378,7 +378,11 @@ function renderAll() {
       const diff = avgRating(b.id) - avgRating(a.id);
       if (diff !== 0) return diff;
     }
-    return QUESTIONS.indexOf(a) - QUESTIONS.indexOf(b);
+    const aMatch = a.id.match(/\d+/);
+    const bMatch = b.id.match(/\d+/);
+    const aNum = aMatch ? parseInt(aMatch[0], 10) : 0;
+    const bNum = bMatch ? parseInt(bMatch[0], 10) : 0;
+    return aNum - bNum;
   });
   if (visible.length === 0) {
     list.innerHTML = `<div class="empty-state">NO QUESTIONS MATCH THIS FILTER</div>`;
@@ -834,9 +838,9 @@ function downloadBackup() {
 // ─────────────────────────────────────────────
 // ADMIN: NORMALIZE IDS
 // ─────────────────────────────────────────────
-async function normalizeIDs() {
+async function normalizeIDs(bypassConfirm = false) {
   if (!isLatest()) return;
-  if (!confirm('Are you sure you want to normalize all IDs to CQ-1, CQ-2, etc., based on their current order? This cannot be undone.')) return;
+  if (!bypassConfirm && !confirm('Are you sure you want to normalize all IDs to CQ-1, CQ-2, etc., based on their current order? This cannot be undone.')) return;
 
   const newVotes = {};
   const newComments = {};
@@ -868,6 +872,8 @@ async function normalizeIDs() {
 function updateAdminUI() {
   const isAdmin = currentUser.toLowerCase() === 'admin';
   document.getElementById('btn-backup').style.display = isAdmin ? 'inline-flex' : 'none';
+  const btnReorder = document.getElementById('btn-reorder');
+  if (btnReorder) btnReorder.style.display = isAdmin ? 'inline-flex' : 'none';
   const btnNormalize = document.getElementById('btn-normalize');
   if (btnNormalize) btnNormalize.style.display = isAdmin ? 'inline-flex' : 'none';
   const btnCreate = document.getElementById('btn-create-version');
@@ -888,6 +894,100 @@ function updateAdminUI() {
   
   const btnAdd = document.querySelector('.btn-add-question');
   if (btnAdd) btnAdd.style.display = isLatest() ? 'inline-flex' : 'none';
+}
+
+// ─────────────────────────────────────────────
+// ADMIN: REORDER CQs
+// ─────────────────────────────────────────────
+let dragSrcEl = null;
+
+function handleDragStart(e) {
+  dragSrcEl = this;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/html', this.innerHTML);
+  this.style.opacity = '0.4';
+}
+
+function handleDragOver(e) {
+  if (e.preventDefault) { e.preventDefault(); }
+  e.dataTransfer.dropEffect = 'move';
+  return false;
+}
+
+function handleDragEnter(e) {
+  this.classList.add('over');
+}
+
+function handleDragLeave(e) {
+  this.classList.remove('over');
+}
+
+function handleDrop(e) {
+  if (e.stopPropagation) { e.stopPropagation(); }
+  if (dragSrcEl !== this) {
+    const srcId = dragSrcEl.dataset.id;
+    const targetId = this.dataset.id;
+    dragSrcEl.innerHTML = this.innerHTML;
+    dragSrcEl.dataset.id = targetId;
+    this.innerHTML = e.dataTransfer.getData('text/html');
+    this.dataset.id = srcId;
+  }
+  return false;
+}
+
+function handleDragEnd(e) {
+  this.style.opacity = '1';
+  document.querySelectorAll('.reorder-item').forEach(item => {
+    item.classList.remove('over');
+  });
+}
+
+function openReorderModal() {
+  if (!isLatest()) return;
+  const list = document.getElementById('reorder-questions-list');
+  
+  const items = [...QUESTIONS].sort((a, b) => {
+    const aMatch = a.id.match(/\d+/);
+    const bMatch = b.id.match(/\d+/);
+    const aNum = aMatch ? parseInt(aMatch[0], 10) : 0;
+    const bNum = bMatch ? parseInt(bMatch[0], 10) : 0;
+    return aNum - bNum;
+  });
+  
+  list.innerHTML = items.map(q => `
+    <div class="reorder-item" draggable="true" data-id="${esc(q.id)}" style="padding: 0.5rem; border: 1px solid var(--border); margin-bottom: 0.2rem; cursor: grab; background: var(--bg-card); display: flex; align-items: center; gap: 0.5rem; border-radius: 4px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-light)" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+      <strong>${esc(q.label)}</strong>: <span style="font-size:0.85rem; color:var(--text-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 400px;">${esc(q.question)}</span>
+    </div>
+  `).join('');
+  
+  const els = list.querySelectorAll('.reorder-item');
+  els.forEach(el => {
+    el.addEventListener('dragstart', handleDragStart, false);
+    el.addEventListener('dragenter', handleDragEnter, false);
+    el.addEventListener('dragover', handleDragOver, false);
+    el.addEventListener('dragleave', handleDragLeave, false);
+    el.addEventListener('drop', handleDrop, false);
+    el.addEventListener('dragend', handleDragEnd, false);
+  });
+  
+  document.getElementById('reorder-modal-backdrop').classList.add('open');
+}
+
+function closeReorderModal() {
+  document.getElementById('reorder-modal-backdrop').classList.remove('open');
+}
+
+async function saveReorder() {
+  const list = document.getElementById('reorder-questions-list');
+  const orderedIds = [...list.querySelectorAll('.reorder-item')].map(el => el.dataset.id);
+  
+  const orderedQuestions = orderedIds.map(id => QUESTIONS.find(q => q.id === id)).filter(Boolean);
+  const remaining = QUESTIONS.filter(q => !orderedIds.includes(q.id));
+  QUESTIONS = [...orderedQuestions, ...remaining];
+  
+  closeReorderModal();
+  await normalizeIDs(true);
 }
 
 function applyHighlight(textareaId) {

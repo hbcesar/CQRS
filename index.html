@@ -77,6 +77,10 @@
       </button>
     </div>
     <div class="ctrl-spacer"></div>
+    <button class="btn-backup" id="btn-reorder" onclick="openReorderModal()" style="display:none;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+      Reorder CQs
+    </button>
     <button class="btn-backup" id="btn-normalize" onclick="normalizeIDs()" style="display:none;">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
       Normalize IDs
@@ -195,6 +199,22 @@
     <div class="modal-footer">
       <button class="btn-cancel" onclick="closeImportModal()">Cancel</button>
       <button class="btn-save" id="btn-confirm-create-version" onclick="createVersion()">Create Version</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ REORDER MODAL ══ -->
+<div class="modal-backdrop" id="reorder-modal-backdrop" onclick="if(event.target.id === 'reorder-modal-backdrop') closeReorderModal()">
+  <div class="modal" id="reorder-modal" style="max-width: 600px;">
+    <div class="modal-title">Reorder Questions</div>
+    <div class="modal-subtitle" style="margin-bottom: 1rem;">Drag and drop to reorder. Saving will re-normalize the IDs automatically.</div>
+    <button class="modal-close" onclick="closeReorderModal()">&#x2715;</button>
+    <div class="form-row" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem;" id="reorder-questions-list">
+      <!-- Items populated dynamically -->
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeReorderModal()">Cancel</button>
+      <button class="btn-save" id="btn-confirm-reorder" onclick="saveReorder()">Save Order</button>
     </div>
   </div>
 </div>
