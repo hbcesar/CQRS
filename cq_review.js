@@ -547,7 +547,7 @@ function openModal() {
   const builder = document.getElementById('answers-builder');
   builder.innerHTML = '';
   addAnswerField();
-  document.getElementById('f-id-preview').textContent = `CQ-${QUESTIONS.length}`;
+  document.getElementById('f-id-preview').textContent = `CQ-${getNextCQNumber()}`;
   document.getElementById('modal-backdrop').classList.add('open');
   document.getElementById('f-question').focus();
 }
@@ -598,7 +598,7 @@ async function saveQuestion() {
   answerTxts.forEach((a, i) => { if (!a) markErr(builder.querySelectorAll('textarea')[i]); });
   if (!valid || answerTxts.some(a => !a)) return;
 
-  const nextN = QUESTIONS.length;
+  const nextN = getNextCQNumber();
   const newQ = {
     id: `cq-${nextN}`,
     label: `CQ-${nextN}`,
@@ -831,9 +831,45 @@ function downloadBackup() {
   URL.revokeObjectURL(url);
 }
 
+// ─────────────────────────────────────────────
+// ADMIN: NORMALIZE IDS
+// ─────────────────────────────────────────────
+async function normalizeIDs() {
+  if (!isLatest()) return;
+  if (!confirm('Are you sure you want to normalize all IDs to CQ-1, CQ-2, etc., based on their current order? This cannot be undone.')) return;
+
+  const newVotes = {};
+  const newComments = {};
+
+  QUESTIONS.forEach((q, index) => {
+    const oldId = q.id;
+    const newLabel = `CQ-${index + 1}`;
+    const newId = `cq-${index + 1}`;
+    
+    if (votes[oldId]) newVotes[newId] = votes[oldId];
+    if (comments[oldId]) newComments[newId] = comments[oldId];
+
+    q.label = newLabel;
+    q.id = newId;
+  });
+
+  votes = newVotes;
+  comments = newComments;
+
+  await Promise.all([
+    saveBin(QUESTIONS_BIN_ID, QUESTIONS),
+    saveBin(VOTES_BIN_ID, votes),
+    saveBin(COMMENTS_BIN_ID, comments)
+  ]);
+
+  renderAll();
+}
+
 function updateAdminUI() {
   const isAdmin = currentUser.toLowerCase() === 'admin';
   document.getElementById('btn-backup').style.display = isAdmin ? 'inline-flex' : 'none';
+  const btnNormalize = document.getElementById('btn-normalize');
+  if (btnNormalize) btnNormalize.style.display = isAdmin ? 'inline-flex' : 'none';
   const btnCreate = document.getElementById('btn-create-version');
   if (btnCreate) {
     btnCreate.style.display = isAdmin ? 'inline-flex' : 'none';
@@ -854,8 +890,42 @@ function updateAdminUI() {
   if (btnAdd) btnAdd.style.display = isLatest() ? 'inline-flex' : 'none';
 }
 
+function applyHighlight(textareaId) {
+  const textarea = document.getElementById(textareaId);
+  if (!textarea) return;
+
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  
+  if (start === end) return; // No selection
+
+  const text = textarea.value;
+  const before = text.substring(0, start);
+  const selected = text.substring(start, end);
+  const after = text.substring(end);
+
+  textarea.value = before + '*' + selected + '*' + after;
+  
+  // Reselect the text including asterisks
+  textarea.focus();
+  textarea.setSelectionRange(start, end + 2);
+}
+
 // ─────────────────────────────────────────────
 // UTIL
+// ─────────────────────────────────────────────
+
+function getNextCQNumber() {
+  let maxN = 0;
+  QUESTIONS.forEach(q => {
+    const match = q.label.match(/^CQ-(\d+)/i);
+    if (match) {
+      const n = parseInt(match[1], 10);
+      if (n > maxN) maxN = n;
+    }
+  });
+  return maxN + 1;
+}
 // ─────────────────────────────────────────────
 
 // HTML-escape a string

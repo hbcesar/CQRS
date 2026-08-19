@@ -77,6 +77,10 @@
       </button>
     </div>
     <div class="ctrl-spacer"></div>
+    <button class="btn-backup" id="btn-normalize" onclick="normalizeIDs()" style="display:none;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      Normalize IDs
+    </button>
     <button class="btn-backup" id="btn-backup" onclick="downloadBackup()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       Backup
@@ -102,7 +106,13 @@
       <div class="form-hint">Automatically assigned as CQ-N.</div>
     </div>
     <div class="form-row">
-      <label>Question Text <span class="required">*</span></label>
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 0.4rem;">
+        <label style="margin-bottom: 0;">Question Text <span class="required">*</span></label>
+        <button type="button" onclick="applyHighlight('f-question')" style="font-size: 0.75rem; padding: 0.2rem 0.5rem; cursor: pointer; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text);">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 3px; vertical-align: -1px;"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          Highlight
+        </button>
+      </div>
       <textarea class="form-input" id="f-question" placeholder="Enter the competency question…" style="min-height:80px"></textarea>
       <div class="form-hint">Use *word* for italics and **word** for bold.</div>
     </div>
@@ -140,7 +150,13 @@
       <input class="form-input" id="ef-id" placeholder="e.g. CQ-2" maxlength="30" />
     </div>
     <div class="form-row">
-      <label>Question Text <span class="required">*</span></label>
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 0.4rem;">
+        <label style="margin-bottom: 0;">Question Text <span class="required">*</span></label>
+        <button type="button" onclick="applyHighlight('ef-question')" style="font-size: 0.75rem; padding: 0.2rem 0.5rem; cursor: pointer; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text);">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 3px; vertical-align: -1px;"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          Highlight
+        </button>
+      </div>
       <textarea class="form-input" id="ef-question" style="min-height:80px"></textarea>
       <div class="form-hint">Use *word* for italics and **word** for bold.</div>
     </div>
