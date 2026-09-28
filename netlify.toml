@@ -26,3 +26,8 @@
   from   = "/api/verify-admin"
   to     = "/.netlify/functions/verify-admin"
   status = 200
+
+[[redirects]]
+  from   = "/api/bin-delete"
+  to     = "/.netlify/functions/bin-delete"
+  status = 200

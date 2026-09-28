@@ -4,12 +4,13 @@ A lightweight, static web application designed for reviewing, annotating, and ra
 
 ## Features
 
-- **Review Competency Questions:** Display a list of CQs along with their exemplar answers.
+- **Ontology Modules Organization:** Group competency questions into ontology modules (e.g., Nutritional Intervention). Normal users can browse and select modules to review; administrators can add, rename, or delete modules.
+- **Review Competency Questions:** Display a list of CQs along with their exemplar answers for the selected module.
 - **Rating System:** Annotate questions using a 5-point Likert scale to vote on their relevance or accuracy.
 - **Comments & Discussions:** Add comments to specific questions to discuss wording, scope, or domain requirements.
 - **Tag Filtering & Sorting:** Easily sort by ID or average rating, and filter by tags or review status to track progress.
-- **Version Control:** Create and switch between versions of the competency questions dataset.
-- **Admin Tools:** Duplicate, edit, and delete questions, as well as export data backups directly from the interface.
+- **Version Control:** Create and switch between versions of the competency questions dataset for each module.
+- **Admin Tools:** Add, edit, and delete modules; duplicate, edit, reorder, and delete questions; and export module backups directly from the interface.
 
 ## Architecture
 
@@ -44,8 +45,8 @@ Once the deployment is complete, your CQ review tool will be live!
 
 ## Usage
 
-- **Default Access:** When you visit the site, enter any name to "log in" for the session. Your name will be attached to your ratings and comments.
-- **Admin Access:** Enter your name as `admin`. A second field will appear asking for the admin password you set in the Netlify environment variables. Upon successful verification, you'll gain access to edit, duplicate, and delete tools, as well as the ability to create backups and new versions.
+- **Default Access:** When you visit the site, enter any name to "log in" for the session. Your name will be attached to your ratings and comments. After entering your name, you will see the list of ontology modules (e.g. Nutritional Intervention). Select a module to enter its competency questions workspace. You can return to the modules screen at any time using the "Back to Modules" button.
+- **Admin Access:** Enter your name as `admin`. A second field will appear asking for the admin password you set in the Netlify environment variables. Upon successful verification, you'll gain access to add, edit, and delete modules, as well as edit, duplicate, reorder, and delete competency questions, create new dataset versions, and download backups.
 
 ## Modifying the Code
 

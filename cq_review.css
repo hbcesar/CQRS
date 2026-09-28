@@ -229,3 +229,215 @@ textarea.form-input { resize: vertical; min-height: 72px; }
 #question-list.sorting { opacity: 0; }
 
 footer { text-align: center; margin-top: 3.5rem; font-family: 'DM Mono', monospace; font-size: 0.67rem; letter-spacing: 0.12em; color: var(--muted); }
+
+/* ── Modules Screen ── */
+#modules-view, #workspace-view { animation: fadeIn 0.2s ease; }
+
+.btn-add-module {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.38rem 1rem;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+.btn-add-module:hover { opacity: 0.85; }
+
+.modules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.module-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 1.6rem 1.6rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.module-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+
+.module-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px rgba(30, 28, 24, 0.12);
+  border-color: var(--accent);
+}
+
+.module-card-header {
+  margin-bottom: 1.2rem;
+}
+
+.module-card-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--ans-bg);
+  border: 1px solid #c8e0d4;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: 0.7rem;
+}
+
+.module-card-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.4rem;
+  color: var(--accent);
+  line-height: 1.25;
+  margin-bottom: 0.5rem;
+}
+
+.module-card-desc {
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.module-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+}
+
+.btn-open-module {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 1.1rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-open-module:hover {
+  opacity: 0.88;
+  transform: translateX(2px);
+}
+
+.module-admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.btn-module-edit {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+  font-family: 'DM Sans', sans-serif;
+  color: var(--accent2);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: all 0.15s;
+}
+
+.btn-module-edit:hover {
+  background: var(--cmt-bg);
+  border-color: var(--accent2);
+}
+
+.btn-module-del {
+  background: var(--surface);
+  border: 1px solid #e8b8ae;
+  border-radius: 6px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+  font-family: 'DM Sans', sans-serif;
+  color: #9b3a2a;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: all 0.15s;
+}
+
+.btn-module-del:hover {
+  background: #faeae7;
+  border-color: #9b3a2a;
+}
+
+/* ── Workspace Nav & Back Button ── */
+.workspace-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 1.4rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.75rem;
+}
+
+.btn-back-modules {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--accent);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-back-modules:hover {
+  background: var(--ans-bg);
+  border-color: var(--accent);
+  transform: translateX(-2px);
+}
+
+.nav-separator {
+  color: var(--muted);
+  opacity: 0.5;
+}
+
+.nav-current-module {
+  color: var(--muted);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+

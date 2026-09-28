@@ -31,29 +31,74 @@ let filterUnreviewed = false;
 let modalTags = [];
 let editTags = [];
 
+// MODULES STATE
+let modules = [];
+let currentModuleId = null;
+let currentModuleTitle = '';
+let currentModuleDesc = '';
+let editingModuleId = null;
+
+const DEFAULT_MODULES = [
+  {
+    id: 'nutritional-intervention',
+    title: 'Nutritional Intervention',
+    description: 'Dietary habits, nutritional interventions, and physiological health outcomes.'
+  }
+];
+
 const LIKERT_LABELS = ['', 'Not Relevant', 'Slightly Relevant', 'Moderately Relevant', 'Very Relevant', 'Highly Relevant'];
 
 // ─────────────────────────────────────────────
 // PROXY HELPERS  (key stays on the server)
 // ─────────────────────────────────────────────
-async function loadBin(binId, fallback, version = currentVersion) {
+async function loadBin(binId, fallback, version = currentVersion, moduleId = currentModuleId) {
   try {
-    const res = await fetch(`/api/bin-read?binId=${encodeURIComponent(binId)}&version=${version}`);
+    let url = `/api/bin-read?binId=${encodeURIComponent(binId)}&version=${version}`;
+    if (moduleId) {
+      url += `&moduleId=${encodeURIComponent(moduleId)}`;
+    }
+    const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return (await res.json()).record ?? fallback;
+    const json = await res.json();
+    let record = json.record ?? fallback;
+
+    // Fallback for nutritional-intervention if questions empty
+    if (binId === 'questions' && moduleId === 'nutritional-intervention' && version === 1 && (!record || record.length === 0)) {
+      try {
+        const backupRes = await fetch('/backup/questions.json');
+        if (backupRes.ok) {
+          const backupQuestions = await backupRes.json();
+          if (Array.isArray(backupQuestions) && backupQuestions.length > 0) {
+            record = backupQuestions;
+          }
+        }
+      } catch (_) {}
+    }
+    return record;
   } catch (e) {
     console.warn('bin-read failed:', e);
+    if (binId === 'questions' && moduleId === 'nutritional-intervention' && version === 1) {
+      try {
+        const backupRes = await fetch('/backup/questions.json');
+        if (backupRes.ok) {
+          const backupQuestions = await backupRes.json();
+          if (Array.isArray(backupQuestions) && backupQuestions.length > 0) {
+            return backupQuestions;
+          }
+        }
+      } catch (_) {}
+    }
     return fallback;
   }
 }
 
-async function saveBin(binId, data, version = currentVersion) {
+async function saveBin(binId, data, version = currentVersion, moduleId = currentModuleId) {
   showSaving(true);
   try {
     const res = await fetch('/api/bin-write', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ binId, data, version })
+      body: JSON.stringify({ binId, data, version, moduleId })
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
   } catch (e) {
@@ -142,11 +187,17 @@ async function submitUsername() {
 
   currentUser = name;
   document.getElementById('username-backdrop').classList.remove('open');
-  document.getElementById('user-chip-name').textContent = name;
+  document.querySelectorAll('.user-chip-name').forEach(el => el.textContent = name);
   document.querySelectorAll('.comment-name-input').forEach(el => el.value = name);
-  renderAll();
   updateAdminUI();
-  QUESTIONS.forEach(q => refreshRatingUI(q.id));
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const modParam = urlParams.get('module');
+  if (modParam && modules.some(m => m.id === modParam)) {
+    await selectModule(modParam);
+  } else {
+    showModulesScreen();
+  }
 }
 
 async function promptRename() {
@@ -173,10 +224,14 @@ async function promptRename() {
       }
     }
     currentUser = trimmedName;
-    document.getElementById('user-chip-name').textContent = currentUser;
+    document.querySelectorAll('.user-chip-name').forEach(el => el.textContent = currentUser);
     document.querySelectorAll('.comment-name-input').forEach(el => el.value = currentUser);
-    renderAll();
     updateAdminUI();
+    if (currentModuleId) {
+      renderAll();
+    } else {
+      renderModulesList();
+    }
   }
 }
 
@@ -210,6 +265,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Enter') submitUsername();
   });
 
+  // Module modal keyboard handlers
+  const mfTitle = document.getElementById('mf-title');
+  if (mfTitle) {
+    mfTitle.addEventListener('keydown', e => {
+      if (e.key === 'Enter') saveNewModule();
+    });
+  }
+  const emfTitle = document.getElementById('emf-title');
+  if (emfTitle) {
+    emfTitle.addEventListener('keydown', e => {
+      if (e.key === 'Enter') saveEditModule();
+    });
+  }
+
   // Add-question tag chip input
   document.getElementById('tag-text-input').addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ',') {
@@ -234,6 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
 
 // ─────────────────────────────────────────────
 // RATING (Likert 1-5)
@@ -800,6 +870,9 @@ function mergeQuestions(stored) {
 // ─────────────────────────────────────────────
 function downloadBackup() {
   const backup = {
+    moduleId: currentModuleId,
+    moduleTitle: currentModuleTitle,
+    version: currentVersion,
     exportedAt: new Date().toISOString(),
     exportedBy: currentUser,
     questions: QUESTIONS.map(q => {
@@ -830,7 +903,8 @@ function downloadBackup() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `cq-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  const modSlug = currentModuleId || 'all';
+  a.download = `cq-backup-${modSlug}-v${currentVersion}-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -871,6 +945,14 @@ async function normalizeIDs(bypassConfirm = false) {
 
 function updateAdminUI() {
   const isAdmin = currentUser.toLowerCase() === 'admin';
+
+  const addModuleBtn = document.getElementById('btn-add-module');
+  if (addModuleBtn) addModuleBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+
+  if (document.getElementById('modules-view') && document.getElementById('modules-view').style.display !== 'none') {
+    renderModulesList();
+  }
+
   const adminPanel = document.getElementById('admin-controls-panel');
   if (adminPanel) adminPanel.style.display = isAdmin ? 'flex' : 'none';
   
@@ -1049,9 +1131,247 @@ function formatText(str) {
 }
 
 // ─────────────────────────────────────────────
+// MODULES MANAGEMENT
+// ─────────────────────────────────────────────
+async function loadModules() {
+  const loaded = await loadBin('modules', DEFAULT_MODULES, 1, null);
+  modules = Array.isArray(loaded) && loaded.length > 0 ? loaded : [...DEFAULT_MODULES];
+}
+
+function renderModulesList() {
+  const grid = document.getElementById('modules-grid');
+  if (!grid) return;
+  const isAdmin = currentUser.toLowerCase() === 'admin';
+
+  const countBadge = document.getElementById('modules-count-badge');
+  if (countBadge) {
+    countBadge.textContent = `${modules.length} Ontology Module${modules.length === 1 ? '' : 's'}`;
+  }
+
+  const addBtn = document.getElementById('btn-add-module');
+  if (addBtn) {
+    addBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+  }
+
+  if (modules.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1; padding: 3rem 1rem;">NO MODULES AVAILABLE${isAdmin ? ' — CLICK "+ ADD MODULE" TO CREATE ONE' : ''}</div>`;
+    return;
+  }
+
+  grid.innerHTML = modules.map(m => {
+    const adminControls = isAdmin ? `
+      <div class="module-admin-actions">
+        <button class="btn-module-edit" onclick="openEditModuleModal('${esc(m.id)}', event)" title="Edit module title">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit Title
+        </button>
+        <button class="btn-module-del" onclick="deleteModule('${esc(m.id)}', event)" title="Delete module">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          Delete
+        </button>
+      </div>
+    ` : '';
+
+    return `
+      <div class="module-card" onclick="selectModule('${esc(m.id)}')">
+        <div class="module-card-header">
+          <span class="module-card-badge">Ontology Module</span>
+          <h2 class="module-card-title">${esc(m.title)}</h2>
+          <p class="module-card-desc">${esc(m.description || 'Review structured competency questions, inspect exemplar answers, and evaluate relevance.')}</p>
+        </div>
+        <div class="module-card-footer">
+          <button class="btn-open-module" onclick="selectModule('${esc(m.id)}')">
+            Select Module
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+          ${adminControls}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function selectModule(moduleId) {
+  const mod = modules.find(m => m.id === moduleId);
+  if (!mod) return;
+  currentModuleId = mod.id;
+  currentModuleTitle = mod.title;
+  currentModuleDesc = mod.description || '';
+
+  const url = new URL(window.location);
+  url.searchParams.set('module', currentModuleId);
+  url.searchParams.delete('v');
+  window.history.pushState({}, '', url);
+
+  document.getElementById('nav-module-title').textContent = currentModuleTitle;
+  document.getElementById('module-workspace-title').textContent = currentModuleTitle;
+  document.getElementById('module-workspace-desc').textContent = currentModuleDesc || 'Review structured competency questions, inspect exemplar answers, and annotate with votes and comments.';
+
+  document.getElementById('modules-view').style.display = 'none';
+  document.getElementById('workspace-view').style.display = 'block';
+
+  await fetchAvailableVersions(currentModuleId);
+  currentVersion = latestVersion;
+  updateVersionSelector();
+  await loadDataForVersion();
+}
+
+function showModulesScreen() {
+  currentModuleId = null;
+  currentModuleTitle = '';
+  currentModuleDesc = '';
+
+  const url = new URL(window.location);
+  url.searchParams.delete('module');
+  url.searchParams.delete('v');
+  window.history.pushState({}, '', url);
+
+  document.getElementById('workspace-view').style.display = 'none';
+  document.getElementById('modules-view').style.display = 'block';
+
+  renderModulesList();
+}
+
+function openAddModuleModal() {
+  const titleInput = document.getElementById('mf-title');
+  titleInput.value = '';
+  document.getElementById('mf-desc').value = '';
+  titleInput.classList.remove('error');
+  document.getElementById('add-module-modal-backdrop').classList.add('open');
+  titleInput.focus();
+}
+
+function closeAddModuleModal() {
+  document.getElementById('add-module-modal-backdrop').classList.remove('open');
+}
+
+async function saveNewModule() {
+  const titleInput = document.getElementById('mf-title');
+  const title = titleInput.value.trim();
+  const desc = document.getElementById('mf-desc').value.trim();
+  if (!title) {
+    titleInput.classList.add('error');
+    setTimeout(() => titleInput.classList.remove('error'), 1500);
+    titleInput.focus();
+    return;
+  }
+
+  let slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  if (!slug) slug = `mod-${Date.now()}`;
+  if (modules.some(m => m.id === slug)) {
+    slug = `${slug}-${Date.now().toString().slice(-4)}`;
+  }
+
+  const newModule = {
+    id: slug,
+    title,
+    description: desc,
+    createdAt: new Date().toISOString()
+  };
+
+  modules.push(newModule);
+  await saveBin('modules', modules, 1, null);
+  closeAddModuleModal();
+  renderModulesList();
+}
+
+function openEditModuleModal(moduleId, event) {
+  if (event) event.stopPropagation();
+  const mod = modules.find(m => m.id === moduleId);
+  if (!mod) return;
+  editingModuleId = moduleId;
+  const titleInput = document.getElementById('emf-title');
+  titleInput.value = mod.title;
+  document.getElementById('emf-desc').value = mod.description || '';
+  titleInput.classList.remove('error');
+  document.getElementById('edit-module-modal-backdrop').classList.add('open');
+  titleInput.focus();
+}
+
+function closeEditModuleModal() {
+  document.getElementById('edit-module-modal-backdrop').classList.remove('open');
+  editingModuleId = null;
+}
+
+async function saveEditModule() {
+  const titleInput = document.getElementById('emf-title');
+  const title = titleInput.value.trim();
+  const desc = document.getElementById('emf-desc').value.trim();
+  if (!title) {
+    titleInput.classList.add('error');
+    setTimeout(() => titleInput.classList.remove('error'), 1500);
+    titleInput.focus();
+    return;
+  }
+
+  const mod = modules.find(m => m.id === editingModuleId);
+  if (!mod) return;
+  mod.title = title;
+  mod.description = desc;
+
+  await saveBin('modules', modules, 1, null);
+  closeEditModuleModal();
+  renderModulesList();
+
+  if (currentModuleId === mod.id) {
+    currentModuleTitle = mod.title;
+    currentModuleDesc = mod.description;
+    document.getElementById('nav-module-title').textContent = mod.title;
+    document.getElementById('module-workspace-title').textContent = mod.title;
+    document.getElementById('module-workspace-desc').textContent = mod.description || '';
+  }
+}
+
+async function deleteModule(moduleId, event) {
+  if (event) event.stopPropagation();
+  const mod = modules.find(m => m.id === moduleId);
+  if (!mod) return;
+
+  if (!confirm(`Are you sure you want to delete the module "${mod.title}" and all its competency questions and ratings?\n\nThis cannot be undone.`)) {
+    return;
+  }
+
+  modules = modules.filter(m => m.id !== moduleId);
+  await saveBin('modules', modules, 1, null);
+
+  try {
+    await fetch('/api/bin-delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ moduleId })
+    });
+  } catch (e) {
+    console.warn('bin-delete failed:', e);
+  }
+
+  renderModulesList();
+
+  if (currentModuleId === moduleId) {
+    showModulesScreen();
+  }
+}
+
+// ─────────────────────────────────────────────
 // INIT & VERSION CONTROL
 // ─────────────────────────────────────────────
 const isLatest = () => currentVersion === latestVersion;
+
+async function fetchAvailableVersions(moduleId = currentModuleId) {
+  try {
+    const url = moduleId ? `/api/bin-list?moduleId=${encodeURIComponent(moduleId)}` : '/api/bin-list';
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      availableVersions = data.versions && data.versions.length ? data.versions : [1];
+    } else {
+      availableVersions = [1];
+    }
+  } catch (e) {
+    console.warn('Failed to list versions, defaulting to [1]', e);
+    availableVersions = [1];
+  }
+  latestVersion = Math.max(...availableVersions);
+}
 
 function updateVersionSelector() {
   const select = document.getElementById('version-select');
@@ -1079,9 +1399,9 @@ async function switchVersion(val) {
 async function loadDataForVersion() {
   document.getElementById('loading').style.display = 'flex';
   const [storedVotes, storedComments, storedQuestions] = await Promise.all([
-    loadBin(VOTES_BIN_ID, {}),
-    loadBin(COMMENTS_BIN_ID, {}),
-    loadBin(QUESTIONS_BIN_ID, [])
+    loadBin(VOTES_BIN_ID, {}, currentVersion, currentModuleId),
+    loadBin(COMMENTS_BIN_ID, {}, currentVersion, currentModuleId),
+    loadBin(QUESTIONS_BIN_ID, [], currentVersion, currentModuleId)
   ]);
   votes = storedVotes;
   comments = storedComments;
@@ -1145,9 +1465,9 @@ async function createVersion() {
 
   const nextV = latestVersion + 1;
   await Promise.all([
-    saveBin(QUESTIONS_BIN_ID, importedQuestions, nextV),
-    saveBin(VOTES_BIN_ID, {}, nextV),
-    saveBin(COMMENTS_BIN_ID, {}, nextV)
+    saveBin(QUESTIONS_BIN_ID, importedQuestions, nextV, currentModuleId),
+    saveBin(VOTES_BIN_ID, {}, nextV, currentModuleId),
+    saveBin(COMMENTS_BIN_ID, {}, nextV, currentModuleId)
   ]);
 
   availableVersions.push(nextV);
@@ -1161,26 +1481,20 @@ async function createVersion() {
 }
 
 (async () => {
-  try {
-    const res = await fetch('/api/bin-list');
-    if (res.ok) {
-      const data = await res.json();
-      availableVersions = data.versions || [1];
-    }
-  } catch (e) {
-    console.warn('Failed to list versions, defaulting to [1]', e);
-  }
-  latestVersion = Math.max(...availableVersions);
+  await loadModules();
+  renderModulesList();
 
   const urlParams = new URLSearchParams(window.location.search);
-  const vParam = urlParams.get('v');
-  if (vParam && availableVersions.includes(parseInt(vParam, 10))) {
-    currentVersion = parseInt(vParam, 10);
-  } else {
-    currentVersion = latestVersion;
+  const modParam = urlParams.get('module');
+
+  if (modParam && modules.some(m => m.id === modParam)) {
+    currentModuleId = modParam;
+    const mod = modules.find(m => m.id === modParam);
+    if (mod) {
+      currentModuleTitle = mod.title;
+      currentModuleDesc = mod.description || '';
+    }
   }
 
-  updateVersionSelector();
-  await loadDataForVersion();
   document.getElementById('username-input').focus();
 })();

@@ -1,229 +1,392 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Competency Questions — Dietary Ontology Review</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap"
+    rel="stylesheet" />
   <link rel="stylesheet" href="cq_review.css" />
 </head>
+
 <body>
 
-<div class="loading-overlay" id="loading"><div class="spinner"></div>LOADING…</div>
-<div class="saving-badge" id="saving-badge">SAVING…</div>
-
-<!-- ══ USERNAME MODAL ══ -->
-<div class="modal-backdrop open" id="username-backdrop">
-  <div class="modal" id="username-modal">
-    <div class="modal-title">Welcome</div>
-    <div class="modal-subtitle">Enter your name to continue. It will be used to sign your votes and comments for this session.</div>
-    <div class="form-row">
-      <label>Your name <span class="required">*</span></label>
-      <input class="form-input" id="username-input" placeholder="e.g. Cesar" maxlength="60" />
-    </div>
-    <div class="form-row" id="admin-password-row" style="display: none; margin-top: 1rem;">
-      <label>Admin Password <span class="required">*</span></label>
-      <input class="form-input" id="admin-password-input" type="password" placeholder="Enter admin password" />
-    </div>
-    <button class="btn-save btn-full" onclick="submitUsername()">Enter</button>
+  <div class="loading-overlay" id="loading">
+    <div class="spinner"></div>LOADING…
   </div>
-</div>
+  <div class="saving-badge" id="saving-badge">SAVING…</div>
 
-<!-- ══ MAIN UI ══ -->
-<div class="container">
-  <header>
-    <div class="header-row" style="flex-wrap: nowrap;">
-      <div style="flex: 1; padding-right: 1rem;">
-        <div class="label">Ontology Review · Competency Questions</div>
-        <h1 id="app-title">Dietary Interventions &amp; Health Outcomes</h1>
-        <p>Review structured competency questions, inspect exemplar answers, and annotate with votes and comments.</p>
+  <!-- ══ USERNAME MODAL ══ -->
+  <div class="modal-backdrop open" id="username-backdrop">
+    <div class="modal" id="username-modal">
+      <div class="modal-title">Welcome</div>
+      <div class="modal-subtitle">Enter your name to continue. It will be used to sign your votes and comments for this
+        session.</div>
+      <div class="form-row">
+        <label>Your name <span class="required">*</span></label>
+        <input class="form-input" id="username-input" placeholder="e.g. John" maxlength="60" />
       </div>
-      <div style="display: flex; gap: 1rem; align-items: flex-start; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end;">
-        <div id="version-controls" style="display: flex; gap: 0.5rem; align-items: center;">
-          <select id="version-select" onchange="switchVersion(this.value)" class="form-input" style="padding: 0.25rem 0.5rem; font-size: 0.9rem; height: auto; min-height: 0; width: auto; cursor: pointer;"></select>
-          <button id="btn-create-version" class="btn-save" style="display:none; padding: 0.25rem 0.5rem; font-size: 0.9rem; height: auto; min-height: 0;" onclick="openImportModal()">Create Version</button>
+      <div class="form-row" id="admin-password-row" style="display: none; margin-top: 1rem;">
+        <label>Admin Password <span class="required">*</span></label>
+        <input class="form-input" id="admin-password-input" type="password" placeholder="Enter admin password" />
+      </div>
+      <button class="btn-save btn-full" onclick="submitUsername()">Enter</button>
+    </div>
+  </div>
+
+  <!-- ══ MAIN UI ══ -->
+  <div class="container">
+    <!-- ══ MODULES SELECTION VIEW ══ -->
+    <div id="modules-view" style="display:none;">
+      <header>
+        <div class="header-row" style="flex-wrap: nowrap;">
+          <div style="flex: 1; padding-right: 1rem;">
+            <div class="label">Ontology Review · Modules</div>
+            <h1 id="app-title">Dietary Interventions &amp; Health Outcomes</h1>
+            <p>Select an ontology module to review, annotate, and evaluate its competency questions.</p>
+          </div>
+          <div style="display: flex; gap: 1rem; align-items: flex-start; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end;">
+            <button class="user-chip" onclick="promptRename()" title="Change name">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              <span class="user-chip-name">…</span>
+            </button>
+          </div>
         </div>
-        <button class="user-chip" id="user-chip" onclick="promptRename()" title="Change name">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          <span id="user-chip-name">…</span>
+      </header>
+
+      <div class="controls-bar" style="justify-content: space-between;">
+        <div class="ctrl-group">
+          <span class="ctrl-label" id="modules-count-badge">Ontology Modules</span>
+        </div>
+        <button class="btn-add-module" id="btn-add-module" onclick="openAddModuleModal()" style="display:none;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Add Module
         </button>
       </div>
-    </div>
-  </header>
 
-  <!-- Admin controls bar -->
-  <div class="controls-bar" id="admin-controls-panel" style="display:none; padding: 0.6rem 1.1rem; margin-bottom: 0.8rem; background: var(--tag-bg);">
-    <span class="ctrl-label" style="margin-right: 0.5rem;">Admin Actions</span>
-    <button class="btn-backup" id="btn-reorder" onclick="openReorderModal()" style="display:inline-flex; border-color: var(--accent); color: var(--accent);">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-      Reorder CQs
-    </button>
-    <button class="btn-backup" id="btn-normalize" onclick="normalizeIDs()" style="display:inline-flex; border-color: var(--accent); color: var(--accent);">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-      Normalize IDs
-    </button>
-    <button class="btn-backup" id="btn-backup" onclick="downloadBackup()" style="display:inline-flex; border-color: var(--accent); color: var(--accent);">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      Backup
-    </button>
-  </div>
+      <div class="modules-grid" id="modules-grid"></div>
+      <footer>Dietary Ontology · Competency Question Review Interface</footer>
+    </div>
 
-  <!-- Controls bar -->
-  <div class="controls-bar">
-    <div class="ctrl-group">
-      <span class="ctrl-label">Sort by</span>
-      <button class="pill-btn active" id="sort-id" onclick="setSort('id')">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M7 12h10M11 18h2"/></svg>
-        Question ID
-      </button>
-      <button class="pill-btn" id="sort-votes" onclick="setSort('votes')">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-        Avg Rating
-      </button>
-    </div>
-    <div class="ctrl-divider"></div>
-    <div class="ctrl-group" id="tag-filter-group">
-      <span class="ctrl-label">Filter</span>
-      <button class="pill-btn tag-active" id="filter-all" onclick="setFilter(null)">All</button>
-    </div>
-    <div class="ctrl-divider"></div>
-    <div class="ctrl-group">
-      <button class="pill-btn" id="filter-unreviewed" onclick="toggleUnreviewed()">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        Not reviewed by me
-      </button>
-    </div>
-    <div class="ctrl-spacer"></div>
-    <button class="btn-add-question" onclick="openModal()">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-      Add Question
-    </button>
-  </div>
+    <!-- ══ CQ WORKSPACE VIEW ══ -->
+    <div id="workspace-view" style="display:none;">
+      <div class="workspace-nav">
+        <button class="btn-back-modules" onclick="showModulesScreen()" title="Back to modules selection">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+          Back to Modules
+        </button>
+        <span class="nav-separator">/</span>
+        <span class="nav-current-module" id="nav-module-title">Nutritional Intervention</span>
+      </div>
 
-  <div id="question-list"></div>
-  <footer>Dietary Ontology · Competency Question Review Interface</footer>
-</div>
+      <header>
+        <div class="header-row" style="flex-wrap: nowrap;">
+          <div style="flex: 1; padding-right: 1rem;">
+            <div class="label" id="workspace-label">Ontology Module · Competency Questions</div>
+            <h1 id="module-workspace-title">Nutritional Intervention</h1>
+            <p id="module-workspace-desc">Review structured competency questions, inspect exemplar answers, and annotate with votes and comments.</p>
+          </div>
+          <div
+            style="display: flex; gap: 1rem; align-items: flex-start; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end;">
+            <div id="version-controls" style="display: flex; gap: 0.5rem; align-items: center;">
+              <select id="version-select" onchange="switchVersion(this.value)" class="form-input"
+                style="padding: 0.25rem 0.5rem; font-size: 0.9rem; height: auto; min-height: 0; width: auto; cursor: pointer;"></select>
+              <button id="btn-create-version" class="btn-save"
+                style="display:none; padding: 0.25rem 0.5rem; font-size: 0.9rem; height: auto; min-height: 0;"
+                onclick="openImportModal()">Create Version</button>
+            </div>
+            <button class="user-chip" onclick="promptRename()" title="Change name">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              <span class="user-chip-name">…</span>
+            </button>
+          </div>
+        </div>
+      </header>
 
-<!-- ══ ADD QUESTION MODAL ══ -->
-<div class="modal-backdrop" id="modal-backdrop" onclick="handleBackdropClick(event)">
-  <div class="modal" id="modal">
-    <div class="modal-title">Add New Question</div>
-    <button class="modal-close" onclick="closeModal()">&#x2715;</button>
-    <div class="form-row">
-      <label>Question ID</label>
-      <div style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--accent);padding:0.45rem 0.8rem;background:var(--tag-bg);border:1px solid var(--border);border-radius:6px;" id="f-id-preview">Auto-assigned on save</div>
-      <div class="form-hint">Automatically assigned as CQ-N.</div>
-    </div>
-    <div class="form-row">
-      <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 0.4rem;">
-        <label style="margin-bottom: 0;">Question Text <span class="required">*</span></label>
-        <button type="button" onclick="applyHighlight('f-question')" style="font-size: 0.75rem; padding: 0.2rem 0.5rem; cursor: pointer; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text);">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 3px; vertical-align: -1px;"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-          Highlight
+      <!-- Admin controls bar -->
+      <div class="controls-bar" id="admin-controls-panel"
+        style="display:none; padding: 0.6rem 1.1rem; margin-bottom: 0.8rem; background: var(--tag-bg);">
+        <span class="ctrl-label" style="margin-right: 0.5rem;">Admin Actions</span>
+        <button class="btn-backup" id="btn-reorder" onclick="openReorderModal()"
+          style="display:inline-flex; border-color: var(--accent); color: var(--accent);">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg>
+          Reorder CQs
+        </button>
+        <button class="btn-backup" id="btn-normalize" onclick="normalizeIDs()"
+          style="display:inline-flex; border-color: var(--accent); color: var(--accent);">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+          Normalize IDs
+        </button>
+        <button class="btn-backup" id="btn-backup" onclick="downloadBackup()"
+          style="display:inline-flex; border-color: var(--accent); color: var(--accent);">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          Backup
         </button>
       </div>
-      <textarea class="form-input" id="f-question" placeholder="Enter the competency question…" style="min-height:80px"></textarea>
-      <div class="form-hint">Use *word* for italics and **word** for bold.</div>
-    </div>
-    <div class="form-row">
-      <label>Tags</label>
-      <div class="tags-input-wrap" id="tags-wrap" onclick="document.getElementById('tag-text-input').focus()">
-        <input class="tags-text-input" id="tag-text-input" placeholder="Type a tag and press Enter…" />
-      </div>
-      <div class="form-hint">Press Enter or comma to add. Click × to remove.</div>
-    </div>
-    <div class="form-row">
-      <label>Example Answers <span class="required">*</span> <span style="font-size:.62rem;text-transform:none;letter-spacing:0">(at least one)</span></label>
-      <div class="form-hint" style="margin-top:0;margin-bottom:0.5rem">Use *word* for italics and **word** for bold.</div>
-      <div class="answers-builder" id="answers-builder"></div>
-      <button class="btn-add-answer" onclick="addAnswerField()">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-        Add another answer
-      </button>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-      <button class="btn-save" onclick="saveQuestion()">Save Question</button>
-    </div>
-  </div>
-</div>
 
-<!-- ══ EDIT QUESTION MODAL ══ -->
-<div class="modal-backdrop" id="edit-modal-backdrop" onclick="handleEditBackdropClick(event)">
-  <div class="modal" id="edit-modal">
-    <div class="modal-title">Edit Question</div>
-    <button class="modal-close" onclick="closeEditModal()">&#x2715;</button>
-    <input type="hidden" id="ef-original-id" />
-    <div class="form-row">
-      <label>Question ID <span class="required">*</span></label>
-      <input class="form-input" id="ef-id" placeholder="e.g. CQ-2" maxlength="30" />
-    </div>
-    <div class="form-row">
-      <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 0.4rem;">
-        <label style="margin-bottom: 0;">Question Text <span class="required">*</span></label>
-        <button type="button" onclick="applyHighlight('ef-question')" style="font-size: 0.75rem; padding: 0.2rem 0.5rem; cursor: pointer; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text);">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 3px; vertical-align: -1px;"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-          Highlight
+      <!-- Controls bar -->
+      <div class="controls-bar">
+        <div class="ctrl-group">
+          <span class="ctrl-label">Sort by</span>
+          <button class="pill-btn active" id="sort-id" onclick="setSort('id')">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M3 6h18M7 12h10M11 18h2" />
+            </svg>
+            Question ID
+          </button>
+          <button class="pill-btn" id="sort-votes" onclick="setSort('votes')">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polygon
+                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+            Avg Rating
+          </button>
+        </div>
+        <div class="ctrl-divider"></div>
+        <div class="ctrl-group" id="tag-filter-group">
+          <span class="ctrl-label">Filter</span>
+          <button class="pill-btn tag-active" id="filter-all" onclick="setFilter(null)">All</button>
+        </div>
+        <div class="ctrl-divider"></div>
+        <div class="ctrl-group">
+          <button class="pill-btn" id="filter-unreviewed" onclick="toggleUnreviewed()">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            Not reviewed by me
+          </button>
+        </div>
+        <div class="ctrl-spacer"></div>
+        <button class="btn-add-question" onclick="openModal()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Add Question
         </button>
       </div>
-      <textarea class="form-input" id="ef-question" style="min-height:80px"></textarea>
-      <div class="form-hint">Use *word* for italics and **word** for bold.</div>
+
+      <div id="question-list"></div>
+      <footer>Dietary Ontology · Competency Question Review Interface</footer>
     </div>
-    <div class="form-row">
-      <label>Tags</label>
-      <div class="tags-input-wrap" id="edit-tags-wrap" onclick="document.getElementById('edit-tag-text-input').focus()">
-        <input class="tags-text-input" id="edit-tag-text-input" placeholder="Type a tag and press Enter…" />
+  </div>
+
+  <!-- ══ ADD QUESTION MODAL ══ -->
+  <div class="modal-backdrop" id="modal-backdrop" onclick="handleBackdropClick(event)">
+    <div class="modal" id="modal">
+      <div class="modal-title">Add New Question</div>
+      <button class="modal-close" onclick="closeModal()">&#x2715;</button>
+      <div class="form-row">
+        <label>Question ID</label>
+        <div
+          style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--accent);padding:0.45rem 0.8rem;background:var(--tag-bg);border:1px solid var(--border);border-radius:6px;"
+          id="f-id-preview">Auto-assigned on save</div>
+        <div class="form-hint">Automatically assigned as CQ-N.</div>
       </div>
-      <div class="form-hint">Press Enter or comma to add. Click × to remove.</div>
-    </div>
-    <div class="form-row">
-      <label>Example Answers <span class="required">*</span></label>
-      <div class="form-hint" style="margin-top:0;margin-bottom:0.5rem">Use *word* for italics and **word** for bold.</div>
-      <div class="answers-builder" id="edit-answers-builder"></div>
-      <button class="btn-add-answer" onclick="addEditAnswerField()">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-        Add another answer
-      </button>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
-      <button class="btn-save" onclick="saveEdit()">Save Changes</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══ IMPORT QUESTIONS MODAL ══ -->
-<div class="modal-backdrop" id="import-modal-backdrop" onclick="if(event.target.id === 'import-modal-backdrop') closeImportModal()">
-  <div class="modal" id="import-modal" style="max-width: 600px;">
-    <div class="modal-title">Create New Version</div>
-    <div class="modal-subtitle" style="margin-bottom: 1rem;">Select questions from Version <span id="import-from-version"></span> to carry over. Comments and ratings will not be carried over.</div>
-    <button class="modal-close" onclick="closeImportModal()">&#x2715;</button>
-    <div class="form-row" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem;" id="import-questions-list">
-      <!-- Checkboxes populated dynamically -->
-    </div>
-    <div class="modal-footer">
-      <button class="btn-cancel" onclick="closeImportModal()">Cancel</button>
-      <button class="btn-save" id="btn-confirm-create-version" onclick="createVersion()">Create Version</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══ REORDER MODAL ══ -->
-<div class="modal-backdrop" id="reorder-modal-backdrop" onclick="if(event.target.id === 'reorder-modal-backdrop') closeReorderModal()">
-  <div class="modal" id="reorder-modal" style="max-width: 600px;">
-    <div class="modal-title">Reorder Questions</div>
-    <div class="modal-subtitle" style="margin-bottom: 1rem;">Drag and drop to reorder. Saving will re-normalize the IDs automatically.</div>
-    <button class="modal-close" onclick="closeReorderModal()">&#x2715;</button>
-    <div class="form-row" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem;" id="reorder-questions-list">
-      <!-- Items populated dynamically -->
-    </div>
-    <div class="modal-footer">
-      <button class="btn-cancel" onclick="closeReorderModal()">Cancel</button>
-      <button class="btn-save" id="btn-confirm-reorder" onclick="saveReorder()">Save Order</button>
+      <div class="form-row">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 0.4rem;">
+          <label style="margin-bottom: 0;">Question Text <span class="required">*</span></label>
+          <button type="button" onclick="applyHighlight('f-question')"
+            style="font-size: 0.75rem; padding: 0.2rem 0.5rem; cursor: pointer; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text);">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              style="margin-right: 3px; vertical-align: -1px;">
+              <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+            </svg>
+            Highlight
+          </button>
+        </div>
+        <textarea class="form-input" id="f-question" placeholder="Enter the competency question…"
+          style="min-height:80px"></textarea>
+        <div class="form-hint">Use *word* for italics and **word** for bold.</div>
+      </div>
+      <div class="form-row">
+        <label>Tags</label>
+        <div class="tags-input-wrap" id="tags-wrap" onclick="document.getElementById('tag-text-input').focus()">
+          <input class="tags-text-input" id="tag-text-input" placeholder="Type a tag and press Enter…" />
+        </div>
+        <div class="form-hint">Press Enter or comma to add. Click × to remove.</div>
+      </div>
+      <div class="form-row">
+        <label>Example Answers <span class="required">*</span> <span
+            style="font-size:.62rem;text-transform:none;letter-spacing:0">(at least one)</span></label>
+        <div class="form-hint" style="margin-top:0;margin-bottom:0.5rem">Use *word* for italics and **word** for bold.
+        </div>
+        <div class="answers-builder" id="answers-builder"></div>
+        <button class="btn-add-answer" onclick="addAnswerField()">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Add another answer
+        </button>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn-save" onclick="saveQuestion()">Save Question</button>
+      </div>
     </div>
   </div>
-</div>
 
-<script src="cq_review.js"></script>
+  <!-- ══ EDIT QUESTION MODAL ══ -->
+  <div class="modal-backdrop" id="edit-modal-backdrop" onclick="handleEditBackdropClick(event)">
+    <div class="modal" id="edit-modal">
+      <div class="modal-title">Edit Question</div>
+      <button class="modal-close" onclick="closeEditModal()">&#x2715;</button>
+      <input type="hidden" id="ef-original-id" />
+      <div class="form-row">
+        <label>Question ID <span class="required">*</span></label>
+        <input class="form-input" id="ef-id" placeholder="e.g. CQ-2" maxlength="30" />
+      </div>
+      <div class="form-row">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 0.4rem;">
+          <label style="margin-bottom: 0;">Question Text <span class="required">*</span></label>
+          <button type="button" onclick="applyHighlight('ef-question')"
+            style="font-size: 0.75rem; padding: 0.2rem 0.5rem; cursor: pointer; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text);">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              style="margin-right: 3px; vertical-align: -1px;">
+              <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+            </svg>
+            Highlight
+          </button>
+        </div>
+        <textarea class="form-input" id="ef-question" style="min-height:80px"></textarea>
+        <div class="form-hint">Use *word* for italics and **word** for bold.</div>
+      </div>
+      <div class="form-row">
+        <label>Tags</label>
+        <div class="tags-input-wrap" id="edit-tags-wrap"
+          onclick="document.getElementById('edit-tag-text-input').focus()">
+          <input class="tags-text-input" id="edit-tag-text-input" placeholder="Type a tag and press Enter…" />
+        </div>
+        <div class="form-hint">Press Enter or comma to add. Click × to remove.</div>
+      </div>
+      <div class="form-row">
+        <label>Example Answers <span class="required">*</span></label>
+        <div class="form-hint" style="margin-top:0;margin-bottom:0.5rem">Use *word* for italics and **word** for bold.
+        </div>
+        <div class="answers-builder" id="edit-answers-builder"></div>
+        <button class="btn-add-answer" onclick="addEditAnswerField()">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Add another answer
+        </button>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+        <button class="btn-save" onclick="saveEdit()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ IMPORT QUESTIONS MODAL ══ -->
+  <div class="modal-backdrop" id="import-modal-backdrop"
+    onclick="if(event.target.id === 'import-modal-backdrop') closeImportModal()">
+    <div class="modal" id="import-modal" style="max-width: 600px;">
+      <div class="modal-title">Create New Version</div>
+      <div class="modal-subtitle" style="margin-bottom: 1rem;">Select questions from Version <span
+          id="import-from-version"></span> to carry over. Comments and ratings will not be carried over.</div>
+      <button class="modal-close" onclick="closeImportModal()">&#x2715;</button>
+      <div class="form-row"
+        style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem;"
+        id="import-questions-list">
+        <!-- Checkboxes populated dynamically -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeImportModal()">Cancel</button>
+        <button class="btn-save" id="btn-confirm-create-version" onclick="createVersion()">Create Version</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ REORDER MODAL ══ -->
+  <div class="modal-backdrop" id="reorder-modal-backdrop"
+    onclick="if(event.target.id === 'reorder-modal-backdrop') closeReorderModal()">
+    <div class="modal" id="reorder-modal" style="max-width: 600px;">
+      <div class="modal-title">Reorder Questions</div>
+      <div class="modal-subtitle" style="margin-bottom: 1rem;">Drag and drop to reorder. Saving will re-normalize the
+        IDs automatically.</div>
+      <button class="modal-close" onclick="closeReorderModal()">&#x2715;</button>
+      <div class="form-row"
+        style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem;"
+        id="reorder-questions-list">
+        <!-- Items populated dynamically -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeReorderModal()">Cancel</button>
+        <button class="btn-save" id="btn-confirm-reorder" onclick="saveReorder()">Save Order</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ ADD MODULE MODAL ══ -->
+  <div class="modal-backdrop" id="add-module-modal-backdrop"
+    onclick="if(event.target.id === 'add-module-modal-backdrop') closeAddModuleModal()">
+    <div class="modal" id="add-module-modal" style="max-width: 520px;">
+      <div class="modal-title">Add New Module</div>
+      <button class="modal-close" onclick="closeAddModuleModal()">&#x2715;</button>
+      <div class="form-row">
+        <label>Module Title <span class="required">*</span></label>
+        <input class="form-input" id="mf-title" placeholder="e.g. Physical Activity" maxlength="80" />
+      </div>
+      <div class="form-row">
+        <label>Description</label>
+        <textarea class="form-input" id="mf-desc" placeholder="Brief description of the module scope…" style="min-height:75px"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeAddModuleModal()">Cancel</button>
+        <button class="btn-save" onclick="saveNewModule()">Create Module</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ EDIT MODULE MODAL ══ -->
+  <div class="modal-backdrop" id="edit-module-modal-backdrop"
+    onclick="if(event.target.id === 'edit-module-modal-backdrop') closeEditModuleModal()">
+    <div class="modal" id="edit-module-modal" style="max-width: 520px;">
+      <div class="modal-title">Edit Module</div>
+      <button class="modal-close" onclick="closeEditModuleModal()">&#x2715;</button>
+      <div class="form-row">
+        <label>Module Title <span class="required">*</span></label>
+        <input class="form-input" id="emf-title" placeholder="e.g. Nutritional Intervention" maxlength="80" />
+      </div>
+      <div class="form-row">
+        <label>Description</label>
+        <textarea class="form-input" id="emf-desc" placeholder="Brief description of the module scope…" style="min-height:75px"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeEditModuleModal()">Cancel</button>
+        <button class="btn-save" onclick="saveEditModule()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="cq_review.js"></script>
 </body>
+
 </html>
