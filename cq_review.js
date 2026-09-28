@@ -910,6 +910,463 @@ function downloadBackup() {
 }
 
 // ─────────────────────────────────────────────
+// ADMIN: UPLOAD JSON (BATCH IMPORT)
+// ─────────────────────────────────────────────
+let pendingUploadData = null;
+let uploadOpenedFromModulesScreen = false;
+
+function openUploadJsonModal(fromModulesScreen = false) {
+  if (currentUser.toLowerCase() !== 'admin') return;
+  if (!fromModulesScreen && !isLatest()) {
+    alert('You can only upload questions to the latest version.');
+    return;
+  }
+
+  pendingUploadData = null;
+  uploadOpenedFromModulesScreen = !!fromModulesScreen;
+
+  const fileInput = document.getElementById('upload-file-input');
+  if (fileInput) fileInput.value = '';
+
+  const dropzone = document.getElementById('upload-dropzone');
+  if (dropzone) dropzone.style.display = 'flex';
+
+  const previewArea = document.getElementById('upload-preview-area');
+  if (previewArea) previewArea.style.display = 'none';
+
+  const confirmBtn = document.getElementById('btn-confirm-upload');
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Upload Questions';
+  }
+
+  const targetRow = document.getElementById('upload-target-module-row');
+  if (targetRow) {
+    targetRow.style.display = fromModulesScreen ? 'block' : 'none';
+    if (fromModulesScreen) {
+      const select = document.getElementById('upload-target-module-select');
+      let optionsHtml = `<option value="__new__">+ Create New Module from Backup</option>`;
+      modules.forEach(m => {
+        optionsHtml += `<option value="${esc(m.id)}">${esc(m.title)}</option>`;
+      });
+      select.innerHTML = optionsHtml;
+      select.value = '__new__';
+      onUploadTargetModuleChange();
+    }
+  }
+
+  document.getElementById('upload-json-modal-backdrop').classList.add('open');
+}
+
+function closeUploadJsonModal() {
+  document.getElementById('upload-json-modal-backdrop').classList.remove('open');
+  pendingUploadData = null;
+}
+
+function onUploadTargetModuleChange() {
+  const select = document.getElementById('upload-target-module-select');
+  const newFields = document.getElementById('upload-new-module-fields');
+  if (newFields) {
+    newFields.style.display = select.value === '__new__' ? 'block' : 'none';
+  }
+}
+
+function handleUploadDragOver(e) {
+  e.preventDefault();
+  const dz = document.getElementById('upload-dropzone');
+  if (dz) dz.classList.add('dragover');
+}
+
+function handleUploadDragLeave(e) {
+  e.preventDefault();
+  const dz = document.getElementById('upload-dropzone');
+  if (dz) dz.classList.remove('dragover');
+}
+
+function handleUploadDrop(e) {
+  e.preventDefault();
+  const dz = document.getElementById('upload-dropzone');
+  if (dz) dz.classList.remove('dragover');
+  if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    processSelectedFile(e.dataTransfer.files[0]);
+  }
+}
+
+function handleUploadFileSelect(e) {
+  if (e.target && e.target.files && e.target.files.length > 0) {
+    processSelectedFile(e.target.files[0]);
+  }
+}
+
+function processSelectedFile(file) {
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.json') && file.type && !file.type.includes('json')) {
+    alert('Please select a JSON (.json) file.');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    try {
+      const content = event.target.result;
+      const parsed = JSON.parse(content);
+      parseAndPreviewUpload(file.name, parsed);
+    } catch (err) {
+      alert('Failed to parse JSON file: ' + err.message);
+    }
+  };
+  reader.onerror = () => {
+    alert('Error reading the selected file.');
+  };
+  reader.readAsText(file);
+}
+
+function parseAndPreviewUpload(filename, data) {
+  let rawQuestions = [];
+  let sourceModuleTitle = '';
+  let sourceModuleId = '';
+  let sourceVersion = null;
+  let importedVotes = {};
+  let importedComments = {};
+  let hasRatingsOrComments = false;
+
+  if (Array.isArray(data)) {
+    rawQuestions = data;
+  } else if (data && typeof data === 'object') {
+    if (Array.isArray(data.questions)) rawQuestions = data.questions;
+    else if (Array.isArray(data.cqs)) rawQuestions = data.cqs;
+    else if (Array.isArray(data.data)) rawQuestions = data.data;
+
+    sourceModuleTitle = data.moduleTitle || '';
+    sourceModuleId = data.moduleId || '';
+    sourceVersion = data.version || null;
+
+    if (data.votes && typeof data.votes === 'object') importedVotes = { ...data.votes };
+    if (data.comments && typeof data.comments === 'object') importedComments = { ...data.comments };
+  }
+
+  if (!Array.isArray(rawQuestions) || rawQuestions.length === 0) {
+    alert('No competency questions found in this JSON file. Please verify the file format.');
+    return;
+  }
+
+  const validQuestions = [];
+  rawQuestions.forEach((item, index) => {
+    if (!item || typeof item !== 'object') return;
+    const questionText = (item.question || item.text || item.cq || '').trim();
+    let answersList = [];
+    if (Array.isArray(item.answers)) {
+      answersList = item.answers.map(String).map(s => s.trim()).filter(Boolean);
+    } else if (typeof item.answers === 'string' && item.answers.trim()) {
+      answersList = [item.answers.trim()];
+    } else if (Array.isArray(item.answer)) {
+      answersList = item.answer.map(String).map(s => s.trim()).filter(Boolean);
+    } else if (typeof item.answer === 'string' && item.answer.trim()) {
+      answersList = [item.answer.trim()];
+    }
+
+    if (!questionText) return;
+    if (answersList.length === 0) {
+      answersList = ['(No answer provided in backup)'];
+    }
+
+    const qId = item.id || `cq-${index + 1}`;
+    const qLabel = item.label || `CQ-${index + 1}`;
+    const qTags = Array.isArray(item.tags) ? item.tags.map(String).filter(Boolean) : [];
+    const addedBy = item.addedBy || 'admin';
+
+    validQuestions.push({
+      id: qId,
+      label: qLabel,
+      tags: qTags,
+      question: questionText,
+      answers: answersList,
+      ...(addedBy && addedBy.toLowerCase() !== 'admin' ? { addedBy } : {})
+    });
+
+    if (item.ratings && typeof item.ratings === 'object') {
+      if (item.ratings.byUser && typeof item.ratings.byUser === 'object') {
+        const uMap = {};
+        Object.entries(item.ratings.byUser).forEach(([u, obj]) => {
+          const score = typeof obj === 'object' && obj !== null ? obj.score : obj;
+          if (typeof score === 'number' && score >= 1 && score <= 5) {
+            uMap[u] = score;
+          }
+        });
+        if (Object.keys(uMap).length > 0) {
+          importedVotes[qId] = { ratings: uMap };
+          hasRatingsOrComments = true;
+        }
+      } else if (item.ratings.ratings && typeof item.ratings.ratings === 'object') {
+        importedVotes[qId] = item.ratings;
+        hasRatingsOrComments = true;
+      }
+    }
+
+    if (Array.isArray(item.comments) && item.comments.length > 0) {
+      const qComments = item.comments.map(c => ({
+        name: c.name || c.author || 'Anonymous',
+        time: c.time || new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }),
+        text: (c.text || '').trim()
+      })).filter(c => c.text);
+      if (qComments.length > 0) {
+        importedComments[qId] = qComments;
+        hasRatingsOrComments = true;
+      }
+    }
+  });
+
+  if (validQuestions.length === 0) {
+    alert('No valid competency questions found in the file. Each question requires at least a question text.');
+    return;
+  }
+
+  if (Object.keys(importedVotes).length > 0 || Object.keys(importedComments).length > 0) {
+    hasRatingsOrComments = true;
+  }
+
+  pendingUploadData = {
+    filename,
+    questions: validQuestions,
+    votes: importedVotes,
+    comments: importedComments,
+    hasRatingsOrComments,
+    sourceModuleTitle,
+    sourceModuleId,
+    sourceVersion
+  };
+
+  document.getElementById('upload-preview-filename').textContent = filename;
+  document.getElementById('upload-preview-count').textContent = `${validQuestions.length} Question${validQuestions.length === 1 ? '' : 's'}`;
+
+  let detailsText = '';
+  if (sourceModuleTitle) {
+    detailsText = `Module: ${sourceModuleTitle}` + (sourceVersion ? ` (v${sourceVersion})` : '');
+  } else {
+    detailsText = `Raw Questions Backup`;
+  }
+  document.getElementById('upload-preview-details').textContent = detailsText;
+
+  const extraEl = document.getElementById('upload-preview-extra');
+  let extraHtml = '';
+  const allTags = [...new Set(validQuestions.flatMap(q => q.tags))];
+  if (allTags.length > 0) {
+    extraHtml += `Tags detected: <b>${allTags.map(esc).join(', ')}</b><br>`;
+  }
+  if (hasRatingsOrComments) {
+    const votesCount = Object.keys(importedVotes).length;
+    const commentsCount = Object.values(importedComments).reduce((s, arr) => s + arr.length, 0);
+    extraHtml += `Found annotations: <b>${votesCount}</b> question rating(s), <b>${commentsCount}</b> comment(s).`;
+  }
+  extraEl.innerHTML = extraHtml;
+
+  if (uploadOpenedFromModulesScreen) {
+    const modSelect = document.getElementById('upload-target-module-select');
+    if (sourceModuleTitle) {
+      const existing = modules.find(m => m.id === sourceModuleId || m.title.toLowerCase() === sourceModuleTitle.toLowerCase());
+      if (existing) {
+        modSelect.value = existing.id;
+      } else {
+        modSelect.value = '__new__';
+        const titleInput = document.getElementById('upload-new-mod-title');
+        if (titleInput) titleInput.value = sourceModuleTitle;
+        const descInput = document.getElementById('upload-new-mod-desc');
+        if (descInput) descInput.value = `Competency questions for ${sourceModuleTitle}`;
+      }
+    } else {
+      const titleInput = document.getElementById('upload-new-mod-title');
+      if (titleInput && !titleInput.value) {
+        const cleanName = filename.replace(/\.json$/i, '').replace(/^cq-backup-?/i, '').replace(/[-_]/g, ' ');
+        titleInput.value = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
+      }
+    }
+    onUploadTargetModuleChange();
+  }
+
+  const ratingsRow = document.getElementById('upload-ratings-row');
+  if (ratingsRow) {
+    ratingsRow.style.display = hasRatingsOrComments ? 'block' : 'none';
+    document.getElementById('upload-include-ratings').checked = hasRatingsOrComments;
+  }
+
+  document.getElementById('upload-preview-area').style.display = 'block';
+  document.getElementById('btn-confirm-upload').disabled = false;
+}
+
+async function executeUploadJson() {
+  if (!pendingUploadData || pendingUploadData.questions.length === 0) return;
+
+  const btn = document.getElementById('btn-confirm-upload');
+  btn.disabled = true;
+  btn.textContent = 'Uploading…';
+
+  try {
+    let targetModId = currentModuleId;
+    let targetModTitle = currentModuleTitle;
+    let targetVer = currentVersion || 1;
+
+    if (uploadOpenedFromModulesScreen) {
+      const select = document.getElementById('upload-target-module-select');
+      if (select.value === '__new__') {
+        const titleInput = document.getElementById('upload-new-mod-title').value.trim();
+        const descInput = document.getElementById('upload-new-mod-desc').value.trim();
+        if (!titleInput) {
+          alert('Please enter a title for the new module.');
+          btn.disabled = false;
+          btn.textContent = 'Upload Questions';
+          return;
+        }
+        let newId = titleInput.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        if (!newId) newId = 'module-' + Date.now();
+        if (modules.some(m => m.id === newId)) newId += '-' + Math.floor(Math.random() * 1000);
+
+        const newMod = { id: newId, title: titleInput, description: descInput };
+        modules.push(newMod);
+        await saveBin('modules', modules, 1, null);
+        renderModulesList();
+
+        targetModId = newId;
+        targetModTitle = titleInput;
+        targetVer = 1;
+      } else {
+        targetModId = select.value;
+        const mod = modules.find(m => m.id === targetModId);
+        targetModTitle = mod ? mod.title : targetModId;
+        targetVer = 1;
+      }
+    }
+
+    const mode = document.querySelector('input[name="upload-mode"]:checked')?.value || 'replace';
+    const includeRatings = document.getElementById('upload-include-ratings')?.checked || false;
+
+    let finalQuestions = [];
+    let finalVotes = {};
+    let finalComments = {};
+
+    if (!uploadOpenedFromModulesScreen) {
+      // Inside workspace
+      if (mode === 'replace') {
+        finalQuestions = [...pendingUploadData.questions];
+        if (includeRatings) {
+          finalVotes = { ...pendingUploadData.votes };
+          finalComments = { ...pendingUploadData.comments };
+        } else {
+          finalVotes = {};
+          finalComments = {};
+        }
+      } else {
+        // Append mode
+        finalQuestions = [...QUESTIONS];
+        finalVotes = { ...votes };
+        finalComments = { ...comments };
+
+        pendingUploadData.questions.forEach(q => {
+          let qId = q.id;
+          let qLabel = q.label;
+          if (finalQuestions.some(existing => existing.id === qId)) {
+            let maxN = 0;
+            finalQuestions.forEach(fq => {
+              const match = fq.label?.match(/^CQ-(\d+)/i);
+              if (match) {
+                const n = parseInt(match[1], 10);
+                if (n > maxN) maxN = n;
+              }
+            });
+            const nextN = maxN + 1;
+            qId = `cq-${nextN}`;
+            qLabel = `CQ-${nextN}`;
+          }
+          finalQuestions.push({ ...q, id: qId, label: qLabel });
+
+          if (includeRatings) {
+            if (pendingUploadData.votes[q.id]) {
+              finalVotes[qId] = pendingUploadData.votes[q.id];
+            }
+            if (pendingUploadData.comments[q.id]) {
+              finalComments[qId] = [ ...(finalComments[qId] || []), ...pendingUploadData.comments[q.id] ];
+            }
+          }
+        });
+      }
+
+      QUESTIONS = finalQuestions;
+      votes = finalVotes;
+      comments = finalComments;
+
+      await Promise.all([
+        saveBin(QUESTIONS_BIN_ID, QUESTIONS, targetVer, targetModId),
+        saveBin(VOTES_BIN_ID, votes, targetVer, targetModId),
+        saveBin(COMMENTS_BIN_ID, comments, targetVer, targetModId)
+      ]);
+
+      rebuildTagButtons();
+      renderAll();
+      closeUploadJsonModal();
+    } else {
+      // From modules screen
+      if (mode === 'append') {
+        const existingQs = await loadBin(QUESTIONS_BIN_ID, [], targetVer, targetModId);
+        const existingVotes = await loadBin(VOTES_BIN_ID, {}, targetVer, targetModId);
+        const existingComments = await loadBin(COMMENTS_BIN_ID, {}, targetVer, targetModId);
+
+        finalQuestions = Array.isArray(existingQs) ? [...existingQs] : [];
+        finalVotes = existingVotes || {};
+        finalComments = existingComments || {};
+
+        pendingUploadData.questions.forEach(q => {
+          let qId = q.id;
+          let qLabel = q.label;
+          if (finalQuestions.some(existing => existing.id === qId)) {
+            let maxN = 0;
+            finalQuestions.forEach(fq => {
+              const match = fq.label?.match(/^CQ-(\d+)/i);
+              if (match) {
+                const n = parseInt(match[1], 10);
+                if (n > maxN) maxN = n;
+              }
+            });
+            const nextN = maxN + 1;
+            qId = `cq-${nextN}`;
+            qLabel = `CQ-${nextN}`;
+          }
+          finalQuestions.push({ ...q, id: qId, label: qLabel });
+
+          if (includeRatings) {
+            if (pendingUploadData.votes[q.id]) {
+              finalVotes[qId] = pendingUploadData.votes[q.id];
+            }
+            if (pendingUploadData.comments[q.id]) {
+              finalComments[qId] = [ ...(finalComments[qId] || []), ...pendingUploadData.comments[q.id] ];
+            }
+          }
+        });
+      } else {
+        finalQuestions = [...pendingUploadData.questions];
+        if (includeRatings) {
+          finalVotes = { ...pendingUploadData.votes };
+          finalComments = { ...pendingUploadData.comments };
+        }
+      }
+
+      await Promise.all([
+        saveBin(QUESTIONS_BIN_ID, finalQuestions, targetVer, targetModId),
+        saveBin(VOTES_BIN_ID, finalVotes, targetVer, targetModId),
+        saveBin(COMMENTS_BIN_ID, finalComments, targetVer, targetModId)
+      ]);
+
+      closeUploadJsonModal();
+      await selectModule(targetModId);
+    }
+  } catch (err) {
+    console.error('Upload failed:', err);
+    alert('Error uploading questions: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Upload Questions';
+  }
+}
+
+// ─────────────────────────────────────────────
 // ADMIN: NORMALIZE IDS
 // ─────────────────────────────────────────────
 async function normalizeIDs(bypassConfirm = false) {
@@ -957,6 +1414,25 @@ function updateAdminUI() {
   if (adminPanel) adminPanel.style.display = isAdmin ? 'flex' : 'none';
   
   document.getElementById('btn-backup').style.display = isAdmin ? 'inline-flex' : 'none';
+  const btnUpload = document.getElementById('btn-upload-json');
+  if (btnUpload) {
+    btnUpload.style.display = isAdmin ? 'inline-flex' : 'none';
+    if (!isLatest()) {
+      btnUpload.disabled = true;
+      btnUpload.style.opacity = '0.5';
+      btnUpload.style.cursor = 'not-allowed';
+      btnUpload.title = "You can only upload questions to the latest version.";
+    } else {
+      btnUpload.disabled = false;
+      btnUpload.style.opacity = '1';
+      btnUpload.style.cursor = 'pointer';
+      btnUpload.title = "Upload questions from backup JSON";
+    }
+  }
+
+  const btnUploadMod = document.getElementById('btn-upload-module-json');
+  if (btnUploadMod) btnUploadMod.style.display = isAdmin ? 'inline-flex' : 'none';
+
   const btnReorder = document.getElementById('btn-reorder');
   if (btnReorder) btnReorder.style.display = isAdmin ? 'inline-flex' : 'none';
   const btnNormalize = document.getElementById('btn-normalize');
@@ -1151,6 +1627,11 @@ function renderModulesList() {
   const addBtn = document.getElementById('btn-add-module');
   if (addBtn) {
     addBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+  }
+
+  const uploadModBtn = document.getElementById('btn-upload-module-json');
+  if (uploadModBtn) {
+    uploadModBtn.style.display = isAdmin ? 'inline-flex' : 'none';
   }
 
   if (modules.length === 0) {

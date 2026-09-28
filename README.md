@@ -10,7 +10,7 @@ A lightweight, static web application designed for reviewing, annotating, and ra
 - **Comments & Discussions:** Add comments to specific questions to discuss wording, scope, or domain requirements.
 - **Tag Filtering & Sorting:** Easily sort by ID or average rating, and filter by tags or review status to track progress.
 - **Version Control:** Create and switch between versions of the competency questions dataset for each module.
-- **Admin Tools:** Add, edit, and delete modules; duplicate, edit, reorder, and delete questions; and export module backups directly from the interface.
+- **Admin Tools:** Add, edit, and delete modules; duplicate, edit, reorder, and delete questions; export module backups; and batch upload questions from previous JSON backups directly from the interface.
 
 ## Architecture
 
@@ -46,7 +46,7 @@ Once the deployment is complete, your CQ review tool will be live!
 ## Usage
 
 - **Default Access:** When you visit the site, enter any name to "log in" for the session. Your name will be attached to your ratings and comments. After entering your name, you will see the list of ontology modules (e.g. Nutritional Intervention). Select a module to enter its competency questions workspace. You can return to the modules screen at any time using the "Back to Modules" button.
-- **Admin Access:** Enter your name as `admin`. A second field will appear asking for the admin password you set in the Netlify environment variables. Upon successful verification, you'll gain access to add, edit, and delete modules, as well as edit, duplicate, reorder, and delete competency questions, create new dataset versions, and download backups.
+- **Admin Access:** Enter your name as `admin`. A second field will appear asking for the admin password you set in the Netlify environment variables. Upon successful verification, you'll gain access to add, edit, and delete modules, as well as edit, duplicate, reorder, and delete competency questions, create new dataset versions, download backups, and batch upload questions from previous backups via the "Upload JSON" button.
 
 ## Modifying the Code
 

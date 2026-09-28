@@ -441,3 +441,139 @@ footer { text-align: center; margin-top: 3.5rem; font-family: 'DM Mono', monospa
   letter-spacing: 0.04em;
 }
 
+/* ── JSON Upload Modal & Dropzone ── */
+.json-dropzone {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 1.8rem 1rem;
+  text-align: center;
+  background: var(--bg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.json-dropzone:hover, .json-dropzone.dragover {
+  border-color: var(--accent);
+  background: var(--ans-bg);
+}
+
+.json-dropzone svg {
+  color: var(--accent);
+  transition: transform 0.2s ease;
+}
+
+.json-dropzone:hover svg {
+  transform: translateY(-2px);
+}
+
+.json-dropzone-text {
+  font-size: 0.85rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.json-dropzone-hint {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+}
+
+.json-preview-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.2rem;
+  margin-bottom: 1.2rem;
+  font-size: 0.82rem;
+}
+
+.json-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.8rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.json-preview-title {
+  font-weight: 600;
+  color: var(--accent);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.82rem;
+}
+
+.json-preview-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem 1rem;
+  margin-bottom: 0.8rem;
+}
+
+.json-preview-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.json-preview-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.json-preview-val {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.import-mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+}
+
+.import-mode-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--surface);
+}
+
+.import-mode-option:hover {
+  border-color: var(--accent);
+  background: var(--ans-bg);
+}
+
+.import-mode-option input[type="radio"] {
+  margin-top: 0.25rem;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.import-mode-label {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.import-mode-desc {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 0.15rem;
+  line-height: 1.35;
+}
+
+
