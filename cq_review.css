@@ -216,7 +216,7 @@ textarea.form-input { resize: vertical; min-height: 72px; }
 .saving-badge { display: none; position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--accent); color: #fff; font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.1em; padding: 0.4rem 0.9rem; border-radius: 20px; box-shadow: var(--shadow); z-index: 300; animation: fadeIn 0.2s ease; }
 
 /* Loading overlay */
-.loading-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 400; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--muted); letter-spacing: 0.1em; }
+.loading-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 400; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--muted); letter-spacing: 0.1em; }
 .spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
 
 /* Animations */

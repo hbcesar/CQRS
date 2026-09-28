@@ -1397,19 +1397,25 @@ async function switchVersion(val) {
 }
 
 async function loadDataForVersion() {
-  document.getElementById('loading').style.display = 'flex';
-  const [storedVotes, storedComments, storedQuestions] = await Promise.all([
-    loadBin(VOTES_BIN_ID, {}, currentVersion, currentModuleId),
-    loadBin(COMMENTS_BIN_ID, {}, currentVersion, currentModuleId),
-    loadBin(QUESTIONS_BIN_ID, [], currentVersion, currentModuleId)
-  ]);
-  votes = storedVotes;
-  comments = storedComments;
-  QUESTIONS = mergeQuestions(storedQuestions);
-  rebuildTagButtons();
-  renderAll();
-  updateAdminUI();
-  document.getElementById('loading').style.display = 'none';
+  const loadingEl = document.getElementById('loading');
+  if (loadingEl) loadingEl.style.display = 'flex';
+  try {
+    const [storedVotes, storedComments, storedQuestions] = await Promise.all([
+      loadBin(VOTES_BIN_ID, {}, currentVersion, currentModuleId),
+      loadBin(COMMENTS_BIN_ID, {}, currentVersion, currentModuleId),
+      loadBin(QUESTIONS_BIN_ID, [], currentVersion, currentModuleId)
+    ]);
+    votes = storedVotes;
+    comments = storedComments;
+    QUESTIONS = mergeQuestions(storedQuestions);
+    rebuildTagButtons();
+    renderAll();
+    updateAdminUI();
+  } catch (e) {
+    console.error('Failed to load data for version:', e);
+  } finally {
+    if (loadingEl) loadingEl.style.display = 'none';
+  }
 }
 
 function openImportModal() {
@@ -1481,19 +1487,26 @@ async function createVersion() {
 }
 
 (async () => {
-  await loadModules();
-  renderModulesList();
+  try {
+    await loadModules();
+    renderModulesList();
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const modParam = urlParams.get('module');
+    const urlParams = new URLSearchParams(window.location.search);
+    const modParam = urlParams.get('module');
 
-  if (modParam && modules.some(m => m.id === modParam)) {
-    currentModuleId = modParam;
-    const mod = modules.find(m => m.id === modParam);
-    if (mod) {
-      currentModuleTitle = mod.title;
-      currentModuleDesc = mod.description || '';
+    if (modParam && modules.some(m => m.id === modParam)) {
+      currentModuleId = modParam;
+      const mod = modules.find(m => m.id === modParam);
+      if (mod) {
+        currentModuleTitle = mod.title;
+        currentModuleDesc = mod.description || '';
+      }
     }
+  } catch (e) {
+    console.error('Initialization error:', e);
+  } finally {
+    const loadingEl = document.getElementById('loading');
+    if (loadingEl) loadingEl.style.display = 'none';
   }
 
   document.getElementById('username-input').focus();

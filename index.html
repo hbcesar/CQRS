@@ -13,7 +13,7 @@
 
 <body>
 
-  <div class="loading-overlay" id="loading">
+  <div class="loading-overlay" id="loading" style="display:none;">
     <div class="spinner"></div>LOADING…
   </div>
   <div class="saving-badge" id="saving-badge">SAVING…</div>
@@ -47,7 +47,8 @@
             <h1 id="app-title">Dietary Interventions &amp; Health Outcomes</h1>
             <p>Select an ontology module to review, annotate, and evaluate its competency questions.</p>
           </div>
-          <div style="display: flex; gap: 1rem; align-items: flex-start; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end;">
+          <div
+            style="display: flex; gap: 1rem; align-items: flex-start; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end;">
             <button class="user-chip" onclick="promptRename()" title="Change name">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -72,7 +73,7 @@
       </div>
 
       <div class="modules-grid" id="modules-grid"></div>
-      <footer>Dietary Ontology · Competency Question Review Interface</footer>
+      <footer>Competency Question Review Interface</footer>
     </div>
 
     <!-- ══ CQ WORKSPACE VIEW ══ -->
@@ -93,7 +94,8 @@
           <div style="flex: 1; padding-right: 1rem;">
             <div class="label" id="workspace-label">Ontology Module · Competency Questions</div>
             <h1 id="module-workspace-title">Nutritional Intervention</h1>
-            <p id="module-workspace-desc">Review structured competency questions, inspect exemplar answers, and annotate with votes and comments.</p>
+            <p id="module-workspace-desc">Review structured competency questions, inspect exemplar answers, and annotate
+              with votes and comments.</p>
           </div>
           <div
             style="display: flex; gap: 1rem; align-items: flex-start; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end;">
@@ -356,7 +358,8 @@
       </div>
       <div class="form-row">
         <label>Description</label>
-        <textarea class="form-input" id="mf-desc" placeholder="Brief description of the module scope…" style="min-height:75px"></textarea>
+        <textarea class="form-input" id="mf-desc" placeholder="Brief description of the module scope…"
+          style="min-height:75px"></textarea>
       </div>
       <div class="modal-footer">
         <button class="btn-cancel" onclick="closeAddModuleModal()">Cancel</button>
@@ -377,7 +380,8 @@
       </div>
       <div class="form-row">
         <label>Description</label>
-        <textarea class="form-input" id="emf-desc" placeholder="Brief description of the module scope…" style="min-height:75px"></textarea>
+        <textarea class="form-input" id="emf-desc" placeholder="Brief description of the module scope…"
+          style="min-height:75px"></textarea>
       </div>
       <div class="modal-footer">
         <button class="btn-cancel" onclick="closeEditModuleModal()">Cancel</button>
