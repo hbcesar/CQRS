@@ -13,18 +13,22 @@ export default async (req, context) => {
   }
 
   try {
-    const { moduleId } = await req.json();
+    const { moduleId, aliases } = await req.json();
     if (!moduleId) {
       return new Response(JSON.stringify({ error: 'Missing moduleId' }), { status: 400 });
     }
 
     const store = getStore({ name: 'cq-review', consistency: 'strong' });
-    const prefix = `mod_${moduleId}_`;
-    const { blobs } = await store.list({ prefix });
+    const prefixes = [`mod_${moduleId}_`, ...(Array.isArray(aliases) ? aliases.map(a => `mod_${a}_`) : [])];
+    let totalDeleted = 0;
 
-    await Promise.all(blobs.map(blob => store.delete(blob.key)));
+    for (const prefix of prefixes) {
+      const { blobs } = await store.list({ prefix });
+      await Promise.all(blobs.map(blob => store.delete(blob.key)));
+      totalDeleted += blobs.length;
+    }
 
-    return new Response(JSON.stringify({ success: true, deleted: blobs.length }), {
+    return new Response(JSON.stringify({ success: true, deleted: totalDeleted }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });

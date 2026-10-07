@@ -193,8 +193,9 @@ async function submitUsername() {
 
   const urlParams = new URLSearchParams(window.location.search);
   const modParam = urlParams.get('module');
-  if (modParam && modules.some(m => m.id === modParam)) {
-    await selectModule(modParam);
+  const targetMod = modParam ? findModuleByIdOrAlias(modParam) : null;
+  if (targetMod) {
+    await selectModule(targetMod.id);
   } else {
     showModulesScreen();
   }
@@ -1216,7 +1217,7 @@ async function executeUploadJson() {
           btn.textContent = 'Upload Questions';
           return;
         }
-        let newId = titleInput.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        let newId = slugify(titleInput);
         if (!newId) newId = 'module-' + Date.now();
         if (modules.some(m => m.id === newId)) newId += '-' + Math.floor(Math.random() * 1000);
 
@@ -1606,6 +1607,25 @@ function formatText(str) {
   return out;
 }
 
+// Convert text to clean URL slug, stripping diacritics/accents (e.g. "Módulo Nutrição" -> "modulo-nutricao")
+function slugify(text) {
+  if (!text) return '';
+  return text
+    .toString()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+// Find module by current ID or any previous alias
+function findModuleByIdOrAlias(idOrAlias) {
+  if (!idOrAlias) return null;
+  return modules.find(m => m.id === idOrAlias || (Array.isArray(m.aliases) && m.aliases.includes(idOrAlias))) || null;
+}
+
 // ─────────────────────────────────────────────
 // MODULES MANAGEMENT
 // ─────────────────────────────────────────────
@@ -1673,7 +1693,7 @@ function renderModulesList() {
 }
 
 async function selectModule(moduleId) {
-  const mod = modules.find(m => m.id === moduleId);
+  const mod = findModuleByIdOrAlias(moduleId);
   if (!mod) return;
   currentModuleId = mod.id;
   currentModuleTitle = mod.title;
@@ -1737,7 +1757,7 @@ async function saveNewModule() {
     return;
   }
 
-  let slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  let slug = slugify(title);
   if (!slug) slug = `mod-${Date.now()}`;
   if (modules.some(m => m.id === slug)) {
     slug = `${slug}-${Date.now().toString().slice(-4)}`;
@@ -1787,19 +1807,60 @@ async function saveEditModule() {
 
   const mod = modules.find(m => m.id === editingModuleId);
   if (!mod) return;
+
+  const oldId = mod.id;
+  let newSlug = slugify(title);
+  if (!newSlug) newSlug = `mod-${Date.now()}`;
+
+  let newId = oldId;
+  // If the title changed and gives a new slug, update ID
+  if (newSlug !== oldId) {
+    let candidate = newSlug;
+    let counter = 2;
+    while (modules.some(m => m.id === candidate && m !== mod)) {
+      candidate = `${newSlug}-${counter++}`;
+    }
+    newId = candidate;
+  }
+
   mod.title = title;
   mod.description = desc;
+
+  if (oldId !== newId) {
+    mod.id = newId;
+    mod.aliases = mod.aliases || [];
+    if (!mod.aliases.includes(oldId)) {
+      mod.aliases.push(oldId);
+    }
+
+    // Rename all blobs in Netlify Blobs from oldModuleId to newModuleId
+    try {
+      await fetch('/api/bin-rename', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ oldModuleId: oldId, newModuleId: newId })
+      });
+    } catch (e) {
+      console.warn('bin-rename failed:', e);
+    }
+  }
 
   await saveBin('modules', modules, 1, null);
   closeEditModuleModal();
   renderModulesList();
 
-  if (currentModuleId === mod.id) {
+  if (currentModuleId === oldId || currentModuleId === newId) {
+    currentModuleId = newId;
     currentModuleTitle = mod.title;
     currentModuleDesc = mod.description;
     document.getElementById('nav-module-title').textContent = mod.title;
     document.getElementById('module-workspace-title').textContent = mod.title;
     document.getElementById('module-workspace-desc').textContent = mod.description || '';
+
+    // Update browser URL query parameter with new module ID
+    const url = new URL(window.location);
+    url.searchParams.set('module', currentModuleId);
+    window.history.replaceState({}, '', url);
   }
 }
 
@@ -1819,7 +1880,7 @@ async function deleteModule(moduleId, event) {
     await fetch('/api/bin-delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ moduleId })
+      body: JSON.stringify({ moduleId, aliases: mod.aliases || [] })
     });
   } catch (e) {
     console.warn('bin-delete failed:', e);
@@ -1827,7 +1888,7 @@ async function deleteModule(moduleId, event) {
 
   renderModulesList();
 
-  if (currentModuleId === moduleId) {
+  if (currentModuleId === moduleId || (mod.aliases && mod.aliases.includes(currentModuleId))) {
     showModulesScreen();
   }
 }
@@ -1974,13 +2035,16 @@ async function createVersion() {
 
     const urlParams = new URLSearchParams(window.location.search);
     const modParam = urlParams.get('module');
+    const targetMod = modParam ? findModuleByIdOrAlias(modParam) : null;
 
-    if (modParam && modules.some(m => m.id === modParam)) {
-      currentModuleId = modParam;
-      const mod = modules.find(m => m.id === modParam);
-      if (mod) {
-        currentModuleTitle = mod.title;
-        currentModuleDesc = mod.description || '';
+    if (targetMod) {
+      currentModuleId = targetMod.id;
+      currentModuleTitle = targetMod.title;
+      currentModuleDesc = targetMod.description || '';
+      if (modParam !== targetMod.id) {
+        const url = new URL(window.location);
+        url.searchParams.set('module', targetMod.id);
+        window.history.replaceState({}, '', url);
       }
     }
   } catch (e) {

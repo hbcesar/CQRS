@@ -31,3 +31,9 @@
   from   = "/api/bin-delete"
   to     = "/.netlify/functions/bin-delete"
   status = 200
+
+[[redirects]]
+  from   = "/api/bin-rename"
+  to     = "/.netlify/functions/bin-rename"
+  status = 200
+
